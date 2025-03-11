@@ -53,43 +53,47 @@ end
 # Parse a module
 function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::Union{FModule,Nothing}
   @debug "Parsing module $name"
-  contents = AbstractFConstruct[]
+  types = FDerived[]
+  variables = FModuleVar[]
+  procedures = FProcedure[]
 
   while length(lines) > 0
     line = popfirst!(lines)
 
     m = reg_match(MODULE_END::Matches, line)
     if m !== nothing && m.captures[1] == name
-      return FModule(name, contents)
+      return FModule(name, types, variables, procedures)
     end
 
     m = reg_match(TYPE_START::Matches, line)
     if m !== nothing
-      parsed_type = _parse_type(m.captures[1], lines)
-      @debug parsed_type
-      @debug typeof(parsed_type)
-      append!(contents, parsed_type)
+      if parsed_type = _parse_type(m.captures[end], line, lines)
+        push!(types, parsed_type)
+      end
       continue
     end
 
     m = reg_match(GLOBAL_VAR::Matches, line)
     if m !== nothing
-      parsed_var = FVar(m.captures[2], FDerived(m.captures[1], FVar[]))
-      append!(contents, parsed_var)
+      var = FVar(m.captures[2], FDerived(m.captures[1], FVar[]), extract_var_attributes(line))
+      push!(variables, FModuleVar(var, extract_visibility(line)))
       continue
     end
 
     m = reg_match(SUBROUTINE_START::Matches, line)
     if m !== nothing
-      parsed_subroutine = _parse_subroutine(m.captures[1], lines)
-      append!(contents, parsed_subroutine)
+      if parsed_proc = _parse_procedure(m.captures[1], m.captures[2], nothing, line, lines)
+        push!(procedures, parsed_proc)
+      end
       continue
     end
 
     m = reg_match(FUNCTION_START::Matches, line)
     if m !== nothing
-      parsed_function = _parse_function(m.captures[2], FIntrinsic(m.captures[1]), lines)
-      append!(contents, parsed_function)
+      ret_type = FIntrinsic(m.captures[1])  # This needs to be improved to handle more return types
+      if parsed_proc = _parse_procedure(m.captures[2], m.captures[3], ret_type, line, lines)
+        push!(procedures, parsed_proc)
+      end
       continue
     end
   end
@@ -97,51 +101,94 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
   return Nothing
 end
 
-function _parse_type(name::AbstractString, lines::Vector{<:AbstractString})::Union{FDerived,Nothing}
+function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vector{<:AbstractString})::Union{FDerived,Nothing}
   @debug "Parsing type $name"
   members = FVar[]
+  attributes = extract_type_attributes(type_line)
 
   while length(lines) > 0
     line = popfirst!(lines)
     m = reg_match(TYPE_END::Matches, line)
     if m !== nothing && m.captures[1] == name
-      return FDerived(name, members)
+      return FDerived(name, members, attributes)
     end
 
     m = reg_match(MEMBER::Matches, line)
     if m !== nothing
-      # TODO: parse type correctly
-      append!(members, FVar(m.captures[2], FIntrinsic(m.captures[1])))
+      var_type = _parse_type_spec(m.captures[1])
+      var_name = m.captures[2]
+      var_attrs = extract_var_attributes(line)
+      push!(members, FVar(var_name, var_type, var_attrs))
     end
   end
 
   return Nothing
 end
 
-function _parse_subroutine(name::AbstractString, lines::Vector{<:AbstractString})::Union{FFunction,Nothing}
-  @debug "Parsing subroutine $name"
-  args = FVar[]
+# Helper function to parse type specifications
+function _parse_type_spec(type_spec::AbstractString)::AbstractFType
+  # Check if it's a derived type
+  m = match(r"TYPE\((\w+)\)", type_spec)
+  if m !== nothing
+    return FDerived(m.captures[1], FVar[])
+  end
+  
+  # Check for kind specification
+  m = match(r"(\w+)(?:\(KIND\s*=\s*(\w+|\d+)\))?", type_spec)
+  if m !== nothing
+    return FIntrinsic(m.captures[1], m.captures[2])
+  end
+  
+  # Default case
+  return FIntrinsic(type_spec)
+end
 
-  while length(lines) > 0
-    line = popfirst!(lines)
-    m = reg_match(SUBROUTINE_END::Matches, line)
-    if m !== nothing && m.captures[1] == name
-      return FFunction(name, args, Nothing)
+function _parse_procedure(name::AbstractString, args_str::AbstractString, return_type::Union{AbstractFType,Nothing}, 
+                        proc_line::AbstractString, lines::Vector{<:AbstractString})::Union{FProcedure,Nothing}
+  @debug "Parsing procedure $name"
+  
+  # Parse procedure attributes
+  is_pure, is_elemental = extract_procedure_attributes(proc_line)
+  visibility = extract_visibility(proc_line)
+  
+  # Parse arguments
+  args = FVar[]
+  if !isempty(args_str)
+    for arg in split(args_str, ",")
+      arg = strip(arg)
+      if !isempty(arg)
+        # For now, we create placeholder variables. These should be updated when we parse their declarations
+        push!(args, FVar(arg, FIntrinsic("unknown"), FVarAttributes()))
+      end
     end
   end
 
-  return Nothing
-end
-
-function _parse_function(name::AbstractString, return_type::AbstractFType, lines::Vector{<:AbstractString})::Union{FFunction,Nothing}
-  @debug "Parsing function $name"
-  args = FVar[]
-
+  # Look for argument declarations and end of procedure
+  end_pattern = return_type === nothing ? SUBROUTINE_END : FUNCTION_END
+  
   while length(lines) > 0
     line = popfirst!(lines)
-    m = reg_match(FUNCTION_END::Matches, line)
+    
+    # Check for procedure end
+    m = reg_match(end_pattern::Matches, line)
     if m !== nothing && m.captures[1] == name
-      return FFunction(name, args, return_type)
+      return FProcedure(name, args, return_type, is_pure, is_elemental, visibility)
+    end
+    
+    # Look for argument declarations to update their types and attributes
+    for arg in args
+      if occursin(arg.name, line)
+        m = reg_match(MEMBER::Matches, line)
+        if m !== nothing
+          var_type = _parse_type_spec(m.captures[1])
+          var_attrs = extract_var_attributes(line)
+          # Update the argument's type and attributes
+          idx = findfirst(a -> a.name == arg.name, args)
+          if idx !== nothing
+            args[idx] = FVar(arg.name, var_type, var_attrs)
+          end
+        end
+      end
     end
   end
 
