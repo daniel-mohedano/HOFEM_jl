@@ -1,8 +1,4 @@
-module Utils
-
 include("Types.jl")
-using .Types
-
 using Dates: now, format
 
 @enum Matches begin
@@ -20,7 +16,6 @@ using Dates: now, format
   TYPE_ATTRIBUTES
   VISIBILITY
 end
-export Matches
 
 _REGEXES = Dict(
   MODULE_START => r"MODULE (\w+)",
@@ -44,7 +39,6 @@ _END = r"\s*$"
 function reg_match(match_type::Matches, line::AbstractString)
   return match(_START * _REGEXES[match_type] * _END, line)
 end
-export reg_match
 
 # Helper function to extract variable attributes from a line
 # Used for derived type members, global vars and procedure args
@@ -74,7 +68,6 @@ function var_attributes(line::AbstractString)::FVarAttributes
 
   return FVarAttributes(is_parameter, is_allocatable, is_pointer, dimensions, intent)
 end
-export var_attributes
 
 # Helper function to extract type attributes from a line
 function type_attributes(line::AbstractString)::FDerivedAttributes
@@ -93,7 +86,6 @@ function type_attributes(line::AbstractString)::FDerivedAttributes
 
   return FDerivedAttributes(is_abstract, is_public, extends)
 end
-export type_attributes
 
 # Helper function to check if a procedure is pure or elemental
 function procedure_attributes(line::AbstractString)
@@ -101,13 +93,11 @@ function procedure_attributes(line::AbstractString)
   is_elemental = occursin(r"ELEMENTAL\s+", line)
   return (is_pure, is_elemental)
 end
-export procedure_attributes
 
 # Helper function to parse visibility
 function visibility(line::AbstractString)::Visibility
-  return occursin(r"PRIVATE", line) ? Types.Private : Types.Public
+  return occursin(r"PRIVATE", line) ? Private::Visibility : Public::Visibility
 end
-export visibility
 
 # Helper function to parse type specifications
 function type_spec(spec::AbstractString)::AbstractFType
@@ -126,12 +116,7 @@ function type_spec(spec::AbstractString)::AbstractFType
   # Default case
   return FIntrinsic(spec)
 end
-export type_spec
 
 function get_date()::String
   return format(now(), "d U Y")
 end
-export get_date
-
-end
-

@@ -2,8 +2,6 @@ module InterfaceGeneration
 
 include("Types.jl")
 include("Utils.jl")
-using .Types
-using .Utils
 
 export generate_interfaces
 
@@ -38,7 +36,7 @@ function _parse(lines::Vector{<:AbstractString})::Union{FModule,Nothing}
   while length(lines) > 0
     line = popfirst!(lines)
 
-    m = reg_match(Utils.MODULE_START, line)
+    m = reg_match(MODULE_START::Matches, line)
     if m !== nothing
       return _parse_module(m.captures[1], lines)
     end
@@ -57,12 +55,12 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
   while length(lines) > 0
     line = popfirst!(lines)
 
-    m = reg_match(Utils.MODULE_END, line)
+    m = reg_match(MODULE_END::Matches, line)
     if m !== nothing && m.captures[1] == name
       return FModule(name, types, variables, procedures)
     end
 
-    m = reg_match(Utils.TYPE_START, line)
+    m = reg_match(TYPE_START::Matches, line)
     if m !== nothing
       parsed_type = _parse_type(m.captures[1], line, lines)
       if parsed_type !== nothing
@@ -71,14 +69,14 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
       continue
     end
 
-    m = reg_match(Utils.GLOBAL_VAR, line)
+    m = reg_match(GLOBAL_VAR::Matches, line)
     if m !== nothing
-      var = FVar(m.captures[2], FDerived(m.captures[1], FVar[]), extract_var_attributes(line))
+      var = FVar(m.captures[2], FDerived(m.captures[1], FVar[]), var_attributes(line))
       push!(variables, FModuleVar(var, visibility(line)))
       continue
     end
 
-    m = reg_match(Utils.SUBROUTINE_START, line)
+    m = reg_match(SUBROUTINE_START::Matches, line)
     if m !== nothing
       parsed_proc = _parse_procedure(m.captures[1], m.captures[2], nothing, line, lines)
       if parsed_proc !== nothing
@@ -87,7 +85,7 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
       continue
     end
 
-    m = reg_match(Utils.FUNCTION_START, line)
+    m = reg_match(FUNCTION_START::Matches, line)
     if m !== nothing
       ret_type = FIntrinsic(m.captures[1])  # This needs to be improved to handle more return types
       parsed_proc = _parse_procedure(m.captures[2], m.captures[3], ret_type, line, lines)
@@ -108,17 +106,17 @@ function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vec
 
   while length(lines) > 0
     line = popfirst!(lines)
-    m = reg_match(Utils.TYPE_END, line)
+    m = reg_match(TYPE_END::Matches, line)
     if m !== nothing && m.captures[1] == name
       return FDerived(name, members, attributes)
     end
 
-    m = reg_match(Utils.MEMBER, line)
+    m = reg_match(MEMBER::Matches, line)
     if m !== nothing
       var_type = type_spec(m.captures[1])
       var_name = m.captures[2]
       var_attrs = var_attributes(line)
-      push!(members, FVar{typeof(var_type)}(var_name, var_type, var_attrs))
+      push!(members, FVar(var_name, var_type, var_attrs))
     end
   end
 
@@ -131,7 +129,7 @@ function _parse_procedure(name::AbstractString, args_str::AbstractString, return
 
   # Parse procedure attributes
   is_pure, is_elemental = procedure_attributes(proc_line)
-  visibility = visibility(proc_line)
+  vis = visibility(proc_line)
 
   # Parse arguments
   args = FVar[]
@@ -146,7 +144,7 @@ function _parse_procedure(name::AbstractString, args_str::AbstractString, return
   end
 
   # Look for argument declarations and end of procedure
-  end_pattern = return_type === nothing ? Utils.SUBROUTINE_END : Utils.FUNCTION_END
+  end_pattern = return_type === nothing ? SUBROUTINE_END::Matches : FUNCTION_END::Matches
 
   while length(lines) > 0
     line = popfirst!(lines)
@@ -154,13 +152,13 @@ function _parse_procedure(name::AbstractString, args_str::AbstractString, return
     # Check for procedure end
     m = reg_match(end_pattern, line)
     if m !== nothing && m.captures[1] == name
-      return FProcedure(name, args, return_type, is_pure, is_elemental, visibility)
+      return FProcedure(name, args, return_type, is_pure, is_elemental, vis)
     end
 
     # Look for argument declarations to update their types and attributes
     for arg in args
       if occursin(arg.name, line)
-        m = reg_match(Utils.MEMBER, line)
+        m = reg_match(MEMBER::Matches, line)
         if m !== nothing
           var_type = _parse_type_spec(m.captures[1])
           var_attrs = var_attributes(line)
