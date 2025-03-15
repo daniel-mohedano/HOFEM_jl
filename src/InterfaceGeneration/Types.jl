@@ -1,7 +1,3 @@
-abstract type Language end
-struct Julia <: Language end
-struct Fortran <: Language end
-
 # Abstract Fortran construct (types and routines)
 abstract type AbstractFConstruct end
 abstract type AbstractFType <: AbstractFConstruct end

@@ -13,20 +13,20 @@ using Test
   # Test types parsing
   @test length(mod.types) == 2
 
-  # Test base_type
+  # Test derived_type
   base = mod.types[1]
-  @test base.name == "base_type"
+  @test base.name == "derive_type"
   @test base.attributes.is_abstract == true
   @test base.attributes.extends === nothing
   @test base.attributes.is_public == false
   @test length(base.members) == 2
   @test all(m -> m.type isa HOFEM_jl.FIntrinsic && m.type.name == "REAL" && m.type.kind == "8", base.members)
 
-  # Test derived_type
+  # Test extended_type
   derived = mod.types[2]
-  @test derived.name == "derived_type"
+  @test derived.name == "extended_type"
   @test derived.attributes.is_abstract == false
-  @test derived.attributes.extends == "base_type"
+  @test derived.attributes.extends == "derived_type"
   @test derived.attributes.is_public == true
   @test length(derived.members) == 1
   @test derived.members[1].attributes.is_allocatable == true
