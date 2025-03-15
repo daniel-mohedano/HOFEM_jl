@@ -1,18 +1,13 @@
-module Types
-
 abstract type Language end
 struct Julia <: Language end
 struct Fortran <: Language end
-export Language, Julia, Fortran
 
 # Abstract Fortran construct (types and routines)
 abstract type AbstractFConstruct end
 abstract type AbstractFType <: AbstractFConstruct end
-export AbstractFConstruct, AbstractFType
 
 # Visibility of module members
 @enum Visibility Public Private
-export Visibility
 
 # Variable attributes
 struct FVarAttributes
@@ -23,7 +18,6 @@ struct FVarAttributes
   intent::Union{AbstractString,Nothing}  # in, out, inout
 end
 FVarAttributes() = FVarAttributes(false, false, false, nothing, nothing)
-export FVarAttributes
 
 # Intrinsic Fortran type with kind parameter
 struct FIntrinsic <: AbstractFType
@@ -31,7 +25,6 @@ struct FIntrinsic <: AbstractFType
   kind::Union{Int,AbstractString,Nothing}
 end
 FIntrinsic(name::AbstractString) = FIntrinsic(name, nothing)
-export FIntrinsic
 
 # Fortran variable
 struct FVar{T<:AbstractFType}
@@ -40,7 +33,6 @@ struct FVar{T<:AbstractFType}
   attributes::FVarAttributes
 end
 FVar(name::AbstractString, type::T) where {T<:AbstractFType} = FVar{T}(name, type, FVarAttributes())
-export FVar
 
 # Derived type attributes
 struct FDerivedAttributes
@@ -49,7 +41,6 @@ struct FDerivedAttributes
   extends::Union{AbstractString,Nothing}  # Name of the parent type if extends
 end
 FDerivedAttributes() = FDerivedAttributes(false, true, nothing)
-export FDerivedAttributes
 
 # Derived Fortran type with members
 struct FDerived <: AbstractFType
@@ -58,7 +49,6 @@ struct FDerived <: AbstractFType
   attributes::FDerivedAttributes
 end
 FDerived(name::AbstractString, members::Vector{FVar}) = FDerived(name, members, FDerivedAttributes())
-export FDerived
 
 # Generic Fortran procedure (function or subroutine)
 struct FProcedure <: AbstractFConstruct
@@ -70,14 +60,12 @@ struct FProcedure <: AbstractFConstruct
   visibility::Visibility
 end
 FProcedure(name::AbstractString, args::Vector{FVar}, ret::Union{<:AbstractFType,Nothing}=nothing) = FProcedure(name, args, ret, false, false, Public)
-export FProcedure
 
 # Module variable or constant
 struct FModuleVar <: AbstractFConstruct
   var::FVar
   visibility::Visibility
 end
-export FModuleVar
 
 # Fortran module
 struct FModule <: AbstractFConstruct
@@ -87,6 +75,3 @@ struct FModule <: AbstractFConstruct
   procedures::Vector{FProcedure}
 end
 FModule(name::AbstractString) = FModule(name, FDerived[], FModuleVar[], FProcedure[])
-export FModule
-
-end
