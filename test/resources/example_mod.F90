@@ -3,16 +3,16 @@ MODULE example_mod
   PRIVATE ! Module default visibility
 
   ! Derived type with attributes
-  TYPE, ABSTRACT :: base_type
-    PRIVATE
+  TYPE, ABSTRACT, PRIVATE :: derived_type
     REAL(KIND=8) :: x
     REAL(KIND=8) :: y
-  END TYPE base_type
+  END TYPE derived_type
 
   ! Extended type
-  TYPE, EXTENDS(base_type), PUBLIC :: derived_type
+  TYPE, EXTENDS(derived_type), PUBLIC :: extended_type
     REAL(KIND=8), ALLOCATABLE :: data(:)
-  END TYPE derived_type
+    TYPE(derived_type) :: z
+  END TYPE extended_type
 
   CONTAINS
 

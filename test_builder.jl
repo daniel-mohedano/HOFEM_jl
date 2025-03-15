@@ -10,4 +10,4 @@ using .HOFEM_jl
 #    "../postprocess_coefficients_module.F90"
 #], "src/Interfaces/")
 #
-HOFEM_jl.generate_interfaces(["../formulation_terms_module.F90"], "src/Interfaces/")
+HOFEM_jl.generate_interfaces(["test/resources/example_mod.F90"], "src/Interfaces/")

@@ -1,9 +1,9 @@
 module InterfaceGeneration
 
-include("Types.jl")
 include("Utils.jl")
 
-export generate_interfaces
+export generate_interfaces, _parse
+export Visibility, FVarAttributes, FIntrinsic, FVar, FDerivedAttributes, FDerived, FProcedure, FModuleVar, FModule
 
 """
     generate_interfaces(module_files::Vector{<:AbstractString}, interface_path::AbstractString)
@@ -47,7 +47,6 @@ end
 
 # Parse a module
 function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::Union{FModule,Nothing}
-  @debug "Parsing module $name"
   types = FDerived[]
   variables = FModuleVar[]
   procedures = FProcedure[]
@@ -100,7 +99,6 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
 end
 
 function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vector{<:AbstractString})::Union{FDerived,Nothing}
-  @debug "Parsing type $name"
   members = FVar[]
   attributes = type_attributes(type_line)
 
@@ -112,6 +110,7 @@ function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vec
     end
 
     m = reg_match(MEMBER::Matches, line)
+    @debug "Parsing type $name, match for member:\n'$line', $m"
     if m !== nothing
       var_type = type_spec(m.captures[1])
       var_name = m.captures[2]
@@ -125,7 +124,6 @@ end
 
 function _parse_procedure(name::AbstractString, args_str::AbstractString, return_type::Union{AbstractFType,Nothing},
   proc_line::AbstractString, lines::Vector{<:AbstractString})::Union{FProcedure,Nothing}
-  @debug "Parsing procedure $name"
 
   # Parse procedure attributes
   is_pure, is_elemental = procedure_attributes(proc_line)
