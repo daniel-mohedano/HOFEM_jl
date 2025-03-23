@@ -1,0 +1,3 @@
+[submodule "src/MatrixMarket.jl"]
+	path = src/MatrixMarket.jl
+	url = git@github.com:daniel-mohedano/MatrixMarket.jl.git
