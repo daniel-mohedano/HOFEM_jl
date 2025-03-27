@@ -45,7 +45,10 @@ function _parse(lines::Vector{<:AbstractString})::Union{FModule,Nothing}
   return Nothing
 end
 
-# Parse a module
+# Parse a module, which can contain:
+# - Derived type definitions
+# - Global variables
+# - Procedures (subroutines and functions)
 function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::Union{FModule,Nothing}
   types = FDerived[]
   variables = FModuleVar[]
@@ -98,9 +101,12 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
   return Nothing
 end
 
-function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vector{<:AbstractString})::Union{FDerived,Nothing}
+# Parse a derived type definition and extract:
+# - Members
+# - Attributes
+function _parse_type(name::AbstractString, type_definition_line::AbstractString, lines::Vector{<:AbstractString})::Union{FDerived,Nothing}
   members = FVar[]
-  attributes = type_attributes(type_line)
+  attributes = type_attributes(type_definition_line)
 
   while length(lines) > 0
     line = popfirst!(lines)
@@ -109,8 +115,7 @@ function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vec
       return FDerived(name, members, attributes)
     end
 
-    m = reg_match(MEMBER::Matches, line)
-    @debug "Parsing type $name, match for member:\n'$line', $m"
+    m = reg_match(VARIABLE::Matches, line)
     if m !== nothing
       var_type = type_spec(m.captures[1])
       var_name = m.captures[2]
@@ -122,6 +127,9 @@ function _parse_type(name::AbstractString, type_line::AbstractString, lines::Vec
   return Nothing
 end
 
+# Parse a procedure (subroutine or function) and extract:
+# - Attributes
+# - Arguments
 function _parse_procedure(name::AbstractString, args_str::AbstractString, return_type::Union{AbstractFType,Nothing},
   proc_line::AbstractString, lines::Vector{<:AbstractString})::Union{FProcedure,Nothing}
 
@@ -129,14 +137,14 @@ function _parse_procedure(name::AbstractString, args_str::AbstractString, return
   is_pure, is_elemental = procedure_attributes(proc_line)
   vis = visibility(proc_line)
 
-  # Parse arguments
+  # Parse arguments names
   args = FVar[]
+  args_names = String[]
   if !isempty(args_str)
     for arg in split(args_str, ",")
       arg = strip(arg)
       if !isempty(arg)
-        # For now, we create placeholder variables. These should be updated when we parse their declarations
-        push!(args, FVar(arg, FIntrinsic("unknown"), FVarAttributes()))
+        push!(args_names, arg)
       end
     end
   end
@@ -154,17 +162,14 @@ function _parse_procedure(name::AbstractString, args_str::AbstractString, return
     end
 
     # Look for argument declarations to update their types and attributes
-    for arg in args
-      if occursin(arg.name, line)
-        m = reg_match(MEMBER::Matches, line)
+    for arg in args_names
+      if occursin(arg, line)
+        m = reg_match(VARIABLE::Matches, line)
         if m !== nothing
-          var_type = _parse_type_spec(m.captures[1])
+          var_type = type_spec(m.captures[1])
           var_attrs = var_attributes(line)
           # Update the argument's type and attributes
-          idx = findfirst(a -> a.name == arg.name, args)
-          if idx !== nothing
-            args[idx] = FVar(arg.name, var_type, var_attrs)
-          end
+          push!(args, FVar(arg, var_type, var_attrs))
         end
       end
     end
