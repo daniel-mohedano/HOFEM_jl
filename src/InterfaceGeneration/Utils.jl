@@ -27,6 +27,8 @@ const _REGEXES = Dict(
   FUNCTION_END => r"END FUNCTION (?<name>\w+)",
 )
 
+# todo: handle multiple variables in the same line, separated by commas
+
 function Base.match(match_type::MatchType, line::AbstractString)::Union{RegexMatch,Nothing}
   _START = r"^\s*"
   _END = r"\s*$"
