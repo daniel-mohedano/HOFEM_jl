@@ -7,4 +7,4 @@ include("MatrixMarket.jl/src/MatrixMarket.jl")
 using .InterfaceGeneration
 using .MatrixMarket
 
-end
+end #module
