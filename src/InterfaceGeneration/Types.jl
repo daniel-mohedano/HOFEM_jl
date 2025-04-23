@@ -1,9 +1,16 @@
+macro exportinstances(enum)
+  # from: https://discourse.julialang.org/t/how-to-write-a-macro-to-export-all-instances-of-an-enum-type/73137
+  eval = GlobalRef(Core, :eval)
+  return :($eval($__module__, Expr(:export, map(Symbol, instances($enum))...)))
+end
+
 # Abstract Fortran construct (types and routines)
 abstract type AbstractFConstruct end
 abstract type AbstractFType <: AbstractFConstruct end
 
 # Visibility of module members
 @enum Visibility Public Private
+@exportinstances Visibility
 
 # Variable attributes
 struct FVarAttributes

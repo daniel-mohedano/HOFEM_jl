@@ -1,8 +1,7 @@
 using HOFEM_jl
 using Test
 
-
-@testset "Interface Generation" begin
+@testset "Interface Generation" failfast=true begin
   # Test module parsing
   lines = readlines(joinpath(@__DIR__, "resources/example_mod.F90"))
   mod = HOFEM_jl._parse(lines)
@@ -20,7 +19,11 @@ using Test
   @test derived_type.attributes.extends === nothing
   @test derived_type.attributes.is_public == false
   @test length(derived_type.members) == 2
-  @test all(m -> m.type isa HOFEM_jl.FIntrinsic && m.type.name == "REAL" && m.type.kind == "8", derived_type.members)
+  for m in derived_type.members
+    @test m.type isa HOFEM_jl.FIntrinsic
+    @test m.type.name == "REAL"
+    @test m.type.kind == "8"
+  end
 
   # Test extended_type
   extended_type = mod.types[2]
@@ -42,7 +45,7 @@ using Test
   @test global_var.var.name == "global_var"
   @test global_var.var.type isa HOFEM_jl.FDerived
   @test global_var.var.type.name == "derived_type"
-  @test global_var.visibility == Public::HOFEM_jl.Visibility
+  @test global_var.visibility == HOFEM_jl.Public
 
   # Test procedures
   @test length(mod.procedures) == 2
@@ -53,8 +56,11 @@ using Test
   @test distance.is_pure == true
   @test distance.is_elemental == false
   @test length(distance.args) == 2
-  @test all(arg -> arg.type isa HOFEM_jl.FDerived && arg.type.name == "derived_type", distance.args)
-  @test all(arg -> arg.attributes.intent == :in, distance.args)
+  for arg in distance.args
+    @test arg.type isa HOFEM_jl.FDerived
+    @test arg.type.name == "derived_type"
+    @test lowercase(arg.attributes.intent) == "in"
+  end
   @test distance.ret isa HOFEM_jl.FIntrinsic
   @test distance.ret.name == "REAL"
   @test distance.ret.kind == "8"
@@ -67,6 +73,6 @@ using Test
   @test length(normalize.args) == 1
   @test normalize.args[1].type isa HOFEM_jl.FDerived
   @test normalize.args[1].type.name == "derived_type"
-  @test normalize.args[1].attributes.intent == :inout
+  @test lowercase(normalize.args[1].attributes.intent) == "inout"
   @test normalize.ret === nothing
 end
