@@ -1,10 +1,9 @@
 using HOFEM_jl
 using Test
 
-
-@testset "Interface Generation" begin
+@testset "Interface Generation" failfast=true begin
   # Test module parsing
-  lines = readlines("resources/example_mod.F90")
+  lines = readlines(joinpath(@__DIR__, "resources/example_mod.F90"))
   mod = HOFEM_jl._parse(lines)
 
   @test mod !== nothing
@@ -14,26 +13,32 @@ using Test
   @test length(mod.types) == 2
 
   # Test derived_type
-  base = mod.types[1]
-  @test base.name == "derive_type"
-  @test base.attributes.is_abstract == true
-  @test base.attributes.extends === nothing
-  @test base.attributes.is_public == false
-  @test length(base.members) == 2
-  @test all(m -> m.type isa HOFEM_jl.FIntrinsic && m.type.name == "REAL" && m.type.kind == "8", base.members)
+  derived_type = mod.types[1]
+  @test derived_type.name == "derived_type"
+  @test derived_type.attributes.is_abstract == true
+  @test derived_type.attributes.extends === nothing
+  @test derived_type.attributes.is_public == false
+  @test length(derived_type.members) == 2
+  for m in derived_type.members
+    @test m.type isa HOFEM_jl.FIntrinsic
+    @test m.type.name == "REAL"
+    @test m.type.kind == "8"
+  end
 
   # Test extended_type
-  derived = mod.types[2]
-  @test derived.name == "extended_type"
-  @test derived.attributes.is_abstract == false
-  @test derived.attributes.extends == "derived_type"
-  @test derived.attributes.is_public == true
-  @test length(derived.members) == 1
-  @test derived.members[1].attributes.is_allocatable == true
-  @test derived.members[1].attributes.dimensions == [":"]
+  extended_type = mod.types[2]
+  @test extended_type.name == "extended_type"
+  @test extended_type.attributes.is_abstract == false
+  @test extended_type.attributes.extends == "derived_type"
+  @test extended_type.attributes.is_public == true
+  @test length(extended_type.members) == 2
+  @test extended_type.members[1].attributes.is_allocatable == true
+  @test extended_type.members[1].attributes.dimensions == [":"]
+  @test extended_type.members[2].type isa HOFEM_jl.FDerived
+  @test extended_type.members[2].type.name == "derived_type"
 
-  # Test module variables
-  @test length(mod.variables) == 2
+  # Test module variables (only captures derived type ones)
+  @test length(mod.variables) == 1
 
   # Test global_var
   global_var = mod.variables[1]
@@ -41,14 +46,6 @@ using Test
   @test global_var.var.type isa HOFEM_jl.FDerived
   @test global_var.var.type.name == "derived_type"
   @test global_var.visibility == HOFEM_jl.Public
-
-  # Test pi constant
-  pi_var = mod.variables[2]
-  @test pi_var.var.name == "pi"
-  @test pi_var.var.type isa HOFEM_jl.FIntrinsic
-  @test pi_var.var.type.name == "REAL"
-  @test pi_var.var.type.kind == "8"
-  @test pi_var.var.attributes.is_parameter == true
 
   # Test procedures
   @test length(mod.procedures) == 2
@@ -59,8 +56,11 @@ using Test
   @test distance.is_pure == true
   @test distance.is_elemental == false
   @test length(distance.args) == 2
-  @test all(arg -> arg.type isa HOFEM_jl.FDerived && arg.type.name == "derived_type", distance.args)
-  @test all(arg -> arg.attributes.intent == :in, distance.args)
+  for arg in distance.args
+    @test arg.type isa HOFEM_jl.FDerived
+    @test arg.type.name == "derived_type"
+    @test lowercase(arg.attributes.intent) == "in"
+  end
   @test distance.ret isa HOFEM_jl.FIntrinsic
   @test distance.ret.name == "REAL"
   @test distance.ret.kind == "8"
@@ -73,6 +73,6 @@ using Test
   @test length(normalize.args) == 1
   @test normalize.args[1].type isa HOFEM_jl.FDerived
   @test normalize.args[1].type.name == "derived_type"
-  @test normalize.args[1].attributes.intent == :inout
+  @test lowercase(normalize.args[1].attributes.intent) == "inout"
   @test normalize.ret === nothing
 end

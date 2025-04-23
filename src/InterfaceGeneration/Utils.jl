@@ -1,76 +1,102 @@
 include("Types.jl")
 using Dates: now, format
 
-@enum Matches begin
+@enum MatchType begin
   MODULE_START
   MODULE_END
   TYPE_START
   TYPE_END
-  MEMBER
+  VARIABLE
   GLOBAL_VAR
   SUBROUTINE_START
   SUBROUTINE_END
   FUNCTION_START
   FUNCTION_END
-  VARIABLE_ATTRIBUTES
-  TYPE_ATTRIBUTES
-  VISIBILITY
 end
 
-_REGEXES = Dict(
-  MODULE_START => r"MODULE (\w+)",
-  MODULE_END => r"END MODULE (\w+)",
-  TYPE_START => r"TYPE\s*(?:,\s*(?:(?:ABSTRACT|PUBLIC|PRIVATE|EXTENDS\(\w+\))\s*,?\s*)*)?::\s*(\w+)",
-  TYPE_END => r"END TYPE (\w+)",
-  MEMBER => r"(\w+(?:\([^)]*\))?)\s*::\s*(\w+)(?:\([\w:,]*\))?(?:\s*=\s*[^!]*)?",
-  GLOBAL_VAR => r"TYPE\((\w+)\)(?:\s*,\s*(?:TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))?\s*::\s*(\w+)",
-  SUBROUTINE_START => r"(?:(?:PURE|ELEMENTAL)\s+)?SUBROUTINE\s+(\w+)\s*\(([\w\s,]*)\)",
-  SUBROUTINE_END => r"END SUBROUTINE (\w+)",
-  FUNCTION_START => r"(?:(?:PURE|ELEMENTAL)\s+)?(\w+(?:\([^)]*\))?)\s+FUNCTION\s+(\w+)\s*\(([\w\s,]*)\)",
-  FUNCTION_END => r"END FUNCTION (\w+)",
-  VARIABLE_ATTRIBUTES => r"(?:PARAMETER|ALLOCATABLE|POINTER|TARGET|INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\))",
-  TYPE_ATTRIBUTES => r"(?:ABSTRACT|PUBLIC|PRIVATE|EXTENDS\((\w+)\))",
-  VISIBILITY => r"(?:PUBLIC|PRIVATE)"
+const _REGEXES = Dict(
+  MODULE_START => r"MODULE (?<name>\w+)",
+  MODULE_END => r"END MODULE (?<name>\w+)",
+  TYPE_START => r"TYPE\s*(?:,\s*(?:(?:ABSTRACT|PUBLIC|PRIVATE|EXTENDS\(\w+\))\s*,?\s*)*)?::\s*(?<name>\w+)",
+  TYPE_END => r"END TYPE (?<name>\w+)",
+  VARIABLE => r"(?<type>\w+(?:\([^)]*\))?)\s*(?:,\s*(?:PARAMETER|ALLOCATABLE|POINTER|TARGET|INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\))\s*,?\s*)*::\s*(?<name>\w+)(?:\([\w:,]*\))?(?:\s*=\s*[^!]*)?",
+  GLOBAL_VAR => r"TYPE\((?<derived_type>\w+)\)(?:\s*,\s*(?:TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))?\s*::\s*(?<name>\w+)",
+  SUBROUTINE_START => r"(?<attribute>PURE|ELEMENTAL)?\s+SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(?:\s*BIND(C))?",
+  SUBROUTINE_END => r"END SUBROUTINE (?<name>\w+)",
+  FUNCTION_START => r"(?:(?<attribute>PURE|ELEMENTAL)\s*)?(?<return_type>\w+(?:\([^)]*\))?)?\s+FUNCTION\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(?:\s*RESULT\((?<return_var>\w+)\))?(?:\s*BIND(C))?",
+  FUNCTION_END => r"END FUNCTION (?<name>\w+)",
 )
 
-_START = r"^\s*"
-_END = r"\s*$"
+# todo: handle multiple variables in the same line, separated by commas
 
-function reg_match(match_type::Matches, line::AbstractString)
-  return match(_START * _REGEXES[match_type] * _END, line)
+function Base.match(match_type::MatchType, line::AbstractString)::Union{RegexMatch,Nothing}
+  _START = r"^\s*"
+  _END = r"\s*$"
+  match_str = _START * _REGEXES[match_type] * _END
+  return match(match_str, line)
 end
 
-# Helper function to extract variable attributes from a line
+# Parses type specifications
+function get_type(spec::AbstractString)::AbstractFType
+  # Check if it's a derived type
+  m = match(r"TYPE\((?<type>\w+)\)", spec)
+  if m !== nothing
+    return FDerived(m["type"], FVar[])
+  end
+
+  # Check for kind specification
+  m = match(r"(?<type>\w+)(?:\(KIND\s*=\s*(?<kind>\w+|\d+)\))?", spec)
+  if m !== nothing
+    return FIntrinsic(m["type"], m["kind"])
+  end
+
+  # Default case
+  return FIntrinsic(spec)
+end
+
+# Extracts variable attributes
 # Used for derived type members, global vars and procedure args
-function var_attributes(line::AbstractString)::FVarAttributes
+function get_var_attributes(line::AbstractString)::FVarAttributes
   is_parameter = occursin(r"PARAMETER", line)
   is_allocatable = occursin(r"ALLOCATABLE", line)
   is_pointer = occursin(r"POINTER", line)
 
-  # Check for dimensions
   dimensions = nothing
-  dim_match = match(r"DIMENSION\(([^)]*)\)", line)
+  # Check for dimensions in DIMENSION attribute
+  dim_match = match(r"DIMENSION\((?<dims>[^)]*)\)", line)
   if dim_match !== nothing
-    # Parse dimensions into a vector of Int or String
+    # Parse dimensions into a vector
     dims = String[]
-    for dim in split(dim_match.captures[1], ",")
+    for dim in split(dim_match["dims"], ",")
       push!(dims, strip(dim))
     end
     dimensions = dims
   end
 
+  # Check for dimensions after variable name
+  if dimensions === nothing
+    var_dims = match(r"::\s*\w+\((?<dims>[\w:,\s]+)\)", line)
+    if var_dims !== nothing
+      dims = String[]
+      for dim in split(var_dims["dims"], ",")
+        push!(dims, strip(dim))
+      end
+      dimensions = dims
+    end
+  end
+
   # Check for intent
   intent = nothing
-  intent_match = match(r"INTENT\((IN|OUT|INOUT)\)", line)
+  intent_match = match(r"INTENT\((?<intent>(IN|OUT|INOUT))\)", line)
   if intent_match !== nothing
-    intent = lowercase(intent_match.captures[1])
+    intent = lowercase(intent_match["intent"])
   end
 
   return FVarAttributes(is_parameter, is_allocatable, is_pointer, dimensions, intent)
 end
 
-# Helper function to extract type attributes from a line
-function type_attributes(line::AbstractString)::FDerivedAttributes
+# Extracts type attributes
+function get_type_attributes(line::AbstractString)::FDerivedAttributes
   # Check for abstract
   is_abstract = occursin(r"ABSTRACT", line)
 
@@ -79,43 +105,19 @@ function type_attributes(line::AbstractString)::FDerivedAttributes
 
   # Check for extends
   extends = nothing
-  extends_match = match(r"EXTENDS\((\w+)\)", line)
+  extends_match = match(r"EXTENDS\((?<extends>\w+)\)", line)
   if extends_match !== nothing
-    extends = extends_match.captures[1]
+    extends = extends_match["extends"]
   end
 
   return FDerivedAttributes(is_abstract, is_public, extends)
 end
 
-# Helper function to check if a procedure is pure or elemental
-function procedure_attributes(line::AbstractString)
-  is_pure = occursin(r"PURE\s+", line)
-  is_elemental = occursin(r"ELEMENTAL\s+", line)
-  return (is_pure, is_elemental)
-end
-
-# Helper function to parse visibility
-function visibility(line::AbstractString)::Visibility
+# Parses visibility
+function get_visibility(line::AbstractString)::Visibility
   return occursin(r"PRIVATE", line) ? Private::Visibility : Public::Visibility
 end
 
-# Helper function to parse type specifications
-function type_spec(spec::AbstractString)::AbstractFType
-  # Check if it's a derived type
-  m = match(r"TYPE\((\w+)\)", spec)
-  if m !== nothing
-    return FDerived(m.captures[1], FVar[])
-  end
-
-  # Check for kind specification
-  m = match(r"(\w+)(?:\(KIND\s*=\s*(\w+|\d+)\))?", spec)
-  if m !== nothing
-    return FIntrinsic(m.captures[1], m.captures[2])
-  end
-
-  # Default case
-  return FIntrinsic(spec)
-end
 
 function get_date()::String
   return format(now(), "d U Y")
