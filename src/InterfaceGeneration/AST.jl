@@ -204,6 +204,89 @@ end
 StructTypes.StructType(::Type{ModuleNode}) = StructTypes.Struct()
 ASDL_TYPES["Module"] = ModuleNode
 
+# Helper function to convert string to enum value
+function string_to_enum(::Type{T}, s::String) where T <: Enum
+    for value in instances(T)
+        if string(value) == s
+            return value
+        end
+    end
+    error("Invalid enum value $s for type $T")
+end
+
+function deserialize_node(ast_json::JSON3.Object)
+    node_type = ast_json["node"]
+    fields = ast_json["fields"]
+    
+    # Get the concrete type for this node
+    concrete_type = get(ASDL_TYPES, node_type, nothing)
+    if isnothing(concrete_type)
+        return nothing
+    end
+    
+    # Get the field names of the concrete type first
+    struct_fields = fieldnames(concrete_type)
+    
+    # Now recursively process only the fields that exist in the struct
+    processed_fields = Dict{String,Any}()
+    for field_name in struct_fields
+        field_str = String(field_name)
+        if haskey(fields, field_str)
+            value = fields[field_str]
+            field_type = fieldtype(concrete_type, field_name)
+            
+            if value isa JSON3.Object
+                # Recursively process nested objects
+                processed_fields[field_str] = deserialize_node(value)
+            elseif value isa JSON3.Array
+                # Process arrays - could be array of nodes or primitives
+                if eltype(field_type) <: Enum
+                    # Handle array of enums
+                    processed_fields[field_str] = map(item -> string_to_enum(eltype(field_type), item), value)
+                else
+                    processed_fields[field_str] = map(item -> 
+                        item isa JSON3.Object ? deserialize_node(item) : item, 
+                        value)
+                end
+            else
+                # For primitive values or enums, convert if needed
+                if field_type <: Enum
+                    processed_fields[field_str] = string_to_enum(field_type, value)
+                else
+                    processed_fields[field_str] = value
+                end
+            end
+        end
+    end
+    
+    # Create the concrete type instance using the processed fields
+    try
+        # Build arguments for the constructor in the order of the struct fields
+        constructor_args = map(name -> get(processed_fields, String(name), nothing), struct_fields)
+        
+        # Create instance
+        return concrete_type(constructor_args...)
+    catch e
+        @error "Failed to construct $node_type" exception=e
+        rethrow(e)
+    end
+end
+
+function deserialize_ast(ast_json::JSON3.Object)::Vector{ModuleNode}
+    modules = ModuleNode[]
+    
+    if ast_json["node"] == "TranslationUnit"
+        # Process each module in the translation unit
+        for item in ast_json["fields"]["items"]
+            if item["node"] == "Module"
+                push!(modules, deserialize_node(item))
+            end
+        end
+    end
+    
+    return modules
+end
+
 # Update build_ast function to use JSON3
 function build_ast(code::String)::Vector{Module}
   code_path, io = mktemp()

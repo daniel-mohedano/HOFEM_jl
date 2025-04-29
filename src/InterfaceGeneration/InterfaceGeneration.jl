@@ -5,6 +5,7 @@ include("AST.jl")
 
 export generate_interfaces, _parse
 export Visibility, FVarAttributes, FIntrinsic, FVar, FDerivedAttributes, FDerived, FProcedure, FModuleVar, FModule
+export deserialize_ast
 
 """
     generate_interfaces(module_files::Vector{<:AbstractString}, interface_path::AbstractString)
