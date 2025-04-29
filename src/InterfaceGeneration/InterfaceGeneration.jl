@@ -1,6 +1,7 @@
 module InterfaceGeneration
 
 include("Utils.jl")
+include("AST.jl")
 
 export generate_interfaces, _parse
 export Visibility, FVarAttributes, FIntrinsic, FVar, FDerivedAttributes, FDerived, FProcedure, FModuleVar, FModule
@@ -23,8 +24,9 @@ function generate_interfaces(module_files::Vector{<:AbstractString}, interface_p
       return
     end
     lines = [strip(line) for line in readlines(file)]
-    modinfo = _parse(lines)
-    print(modinfo)
+    #modinfo = _parse(lines)
+    #print(modinfo)
+    build_ast(read(file, String))
 
     # build_fortran_interface(module_info, interface_path)
     # build_julia_interface(module_info, interface_path)
