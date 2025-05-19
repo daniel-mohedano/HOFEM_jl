@@ -1,8 +1,3 @@
-module InterfaceGeneration
-
-include("Parsing/Parsing.jl")
-using .Parsing
-
 """
     generate_interfaces(module_files::Vector{<:AbstractString}, interface_path::AbstractString)
 
@@ -330,5 +325,3 @@ Parse the module contained in the Fortran file provided.
 #    return new_string
 #  end
 #end
-
-end #module

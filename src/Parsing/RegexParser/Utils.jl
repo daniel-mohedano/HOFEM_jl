@@ -1,5 +1,3 @@
-include("Types.jl")
-
 @enum MatchType begin
   MODULE_START
   MODULE_END

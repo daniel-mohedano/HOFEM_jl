@@ -8,9 +8,9 @@ else
 end
 
 if all_tests || "regex" in ARGS
-  include("module_parsing_regex.jl")
+  include("Parsing/RegexParserImplTest.jl")
 end
 
 if all_tests || "ast" in ARGS
-  include("module_parsing_ast.jl")
+  include("Parsing/ASTParserImplTest.jl")
 end

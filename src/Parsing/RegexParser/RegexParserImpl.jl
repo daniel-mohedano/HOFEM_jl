@@ -1,4 +1,3 @@
-include("../Parser.jl")
 include("Types.jl")
 include("Utils.jl")
 
@@ -11,7 +10,7 @@ function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vect
   for file in module_files
     if !(isfile(file))
       @warn "Fortran module `$file` not found."
-    continue
+      continue
     end
 
     lines = [strip(line) for line in readlines(file)]

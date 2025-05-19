@@ -1,17 +1,15 @@
-include("../Parser.jl")
-
 using JSON3
 
 struct ASTParserImpl <: Parser
 end
 
 function parse(p::ASTParserImpl, module_files::Vector{<:AbstractString})::Vector{AbstractModule}
-  modules = AbstractModule[] 
+  modules = AbstractModule[]
 
   for file in module_files
     if !(isfile(file))
       @warn "Fortran module `$file` not found."
-    continue
+      continue
     end
 
     code = read(file)

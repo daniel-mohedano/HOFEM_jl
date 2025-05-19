@@ -1,11 +1,8 @@
 using Test
 
-include("../src/InterfaceGeneration/Parsing/RegexParser/RegexParser.jl")
-using ..RegexParser
-
 @testset "Module Parsing - Regex" failfast = true begin
   # Test module parsing
-  parser = RegexParserImpl()
+  parser = HOFEM_jl.RegexParserImpl()
   parsed_modules = parse(parser, [joinpath(@__DIR__, "resources/example_mod.F90")])
 
   @test length(parsed_modules) == 1
