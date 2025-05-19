@@ -1,16 +1,14 @@
-macro exportinstances(enum)
-  # from: https://discourse.julialang.org/t/how-to-write-a-macro-to-export-all-instances-of-an-enum-type/73137
-  eval = GlobalRef(Core, :eval)
-  return :($eval($__module__, Expr(:export, map(Symbol, instances($enum))...)))
-end
+#macro exportinstances(enum)
+#  # from: https://discourse.julialang.org/t/how-to-write-a-macro-to-export-all-instances-of-an-enum-type/73137
+#  eval = GlobalRef(Core, :eval)
+#  return :($eval($__module__, Expr(:export, map(Symbol, instances($enum))...)))
+#end
 
-# Abstract Fortran construct (types and routines)
-abstract type AbstractFConstruct end
-abstract type AbstractFType <: AbstractFConstruct end
+abstract type AbstractFType end
 
 # Visibility of module members
 @enum Visibility Public Private
-@exportinstances Visibility
+#@exportinstances Visibility
 
 # Variable attributes
 struct FVarAttributes
@@ -54,7 +52,7 @@ end
 FDerived(name::AbstractString, members::Vector{FVar}) = FDerived(name, members, FDerivedAttributes())
 
 # Generic Fortran procedure (function or subroutine)
-struct FProcedure <: AbstractFConstruct
+struct FProcedure
   name::AbstractString
   args::Vector{FVar}
   ret::Union{<:AbstractFType,Nothing}  # Nothing for subroutines
@@ -65,13 +63,13 @@ end
 FProcedure(name::AbstractString, args::Vector{FVar}, ret::Union{<:AbstractFType,Nothing}=nothing) = FProcedure(name, args, ret, false, false, Public)
 
 # Module variable or constant
-struct FModuleVar <: AbstractFConstruct
+struct FModuleVar
   var::FVar
   visibility::Visibility
 end
 
 # Fortran module
-struct FModule <: AbstractFConstruct
+struct FModule <: AbstractModule
   name::AbstractString
   types::Vector{FDerived}
   variables::Vector{FModuleVar}

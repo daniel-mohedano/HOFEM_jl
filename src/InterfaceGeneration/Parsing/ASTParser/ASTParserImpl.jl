@@ -1,7 +1,26 @@
-# Fortran AST structures
-# This file contains the Julia structures that represent the essential parts of the Fortran AST
+include("../Parser.jl")
 
 using JSON3
+
+struct ASTParserImpl <: Parser
+end
+
+function parse(p::ASTParserImpl, module_files::Vector{<:AbstractString})::Vector{AbstractModule}
+  modules = AbstractModule[] 
+
+  for file in module_files
+    if !(isfile(file))
+      @warn "Fortran module `$file` not found."
+    continue
+    end
+
+    code = read(file)
+    parsed_modules = parse_modules(code)
+    push!(modules, parsed_modules)
+  end
+
+  return modules
+end
 
 # Dictionary mapping ASDL type names to Julia types
 const ASDL_TYPES = Dict{String,Type}()
@@ -96,6 +115,18 @@ struct AttrIntentNode <: DeclAttributeNode
 end
 ASDL_TYPES["AttrIntent"] = AttrIntentNode
 
+abstract type ExprNode end
+
+struct Num <: ExprNode
+  n::Int32
+end
+ASDL_TYPES["Num"] = Num
+
+struct Name <: ExprNode
+  id::String
+end
+ASDL_TYPES["Name"] = Name
+
 @enum DeclType begin
   TypeClass
   TypeCharacter
@@ -116,6 +147,7 @@ end
 end
 
 struct KindItemNode
+  value::Union{ExprNode,Nothing}
   type::KindItemType
 end
 ASDL_TYPES["kind_item"] = KindItemNode
@@ -142,18 +174,12 @@ struct SubroutineNode <: ProgramUnitNode
 end
 ASDL_TYPES["Subroutine"] = SubroutineNode
 
-abstract type ExprNode end
-
-struct Name <: ExprNode
-  id::String
-end
-ASDL_TYPES["Name"] = Name
 
 struct FunctionNode <: ProgramUnitNode
   name::String
   args::Vector{ArgNode}
   attributes::Vector{DeclAttributeNode}
-  return_var::Union{ExprNode, Nothing}
+  return_var::Union{ExprNode,Nothing}
 end
 ASDL_TYPES["Function"] = FunctionNode
 
@@ -179,7 +205,7 @@ struct DerivedTypeNode <: UnitDecl2Node
 end
 ASDL_TYPES["DerivedType"] = DerivedTypeNode
 
-struct ModuleNode
+struct ModuleNode <: AbstractModule
   name::String
   decl::Vector{UnitDecl2Node}
   contains::Vector{ProgramUnitNode}
@@ -279,8 +305,7 @@ function deserialize_ast(ast_json::JSON3.Object)::Vector{ModuleNode}
   return modules
 end
 
-# Update build_ast function to use JSON3
-function build_ast(code::String)::Vector{Module}
+function parse_modules(code::String)::Vector{ModuleNode}
   code_path, io = mktemp()
   write(io, code)
   close(io)

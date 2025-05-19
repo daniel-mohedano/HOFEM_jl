@@ -1,5 +1,4 @@
 include("Types.jl")
-using Dates: now, format
 
 @enum MatchType begin
   MODULE_START
@@ -116,9 +115,4 @@ end
 # Parses visibility
 function get_visibility(line::AbstractString)::Visibility
   return occursin(r"PRIVATE", line) ? Private::Visibility : Public::Visibility
-end
-
-
-function get_date()::String
-  return format(now(), "d U Y")
 end

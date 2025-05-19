@@ -1,11 +1,16 @@
-using HOFEM_jl
 using Test
 
-@testset "Interface Generation" failfast=true begin
-  # Test module parsing
-  lines = readlines(joinpath(@__DIR__, "resources/example_mod.F90"))
-  mod = HOFEM_jl._parse(lines)
+include("../src/InterfaceGeneration/Parsing/RegexParser/RegexParser.jl")
+using ..RegexParser
 
+@testset "Module Parsing - Regex" failfast = true begin
+  # Test module parsing
+  parser = RegexParserImpl()
+  parsed_modules = parse(parser, [joinpath(@__DIR__, "resources/example_mod.F90")])
+
+  @test length(parsed_modules) == 1
+
+  mod = parsed_modules[1]
   @test mod !== nothing
   @test mod.name == "example_mod"
 
