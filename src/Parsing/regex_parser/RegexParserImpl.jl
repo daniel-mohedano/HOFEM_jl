@@ -1,7 +1,7 @@
 include("Types.jl")
 include("Utils.jl")
 
-struct RegexParserImpl <: Parser
+struct RegexParserImpl <: AbstractParser
 end
 
 function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vector{AbstractModule}

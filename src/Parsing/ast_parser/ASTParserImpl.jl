@@ -1,6 +1,6 @@
 using JSON3
 
-struct ASTParserImpl <: Parser
+struct ASTParserImpl <: AbstractParser
 end
 
 function parse(p::ASTParserImpl, module_files::Vector{<:AbstractString})::Vector{AbstractModule}

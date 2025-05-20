@@ -1,2 +1,2 @@
-abstract type Parser end
+abstract type AbstractParser end
 abstract type AbstractModule end
