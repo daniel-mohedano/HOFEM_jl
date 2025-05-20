@@ -3,7 +3,7 @@ using Test
 @testset "Module Parsing - Regex" failfast = true begin
   # Test module parsing
   parser = HOFEM_jl.RegexParserImpl()
-  parsed_modules = parse(parser, [joinpath(@__DIR__, "resources/example_mod.F90")])
+  parsed_modules = HOFEM_jl.Parsing.parse(parser, [joinpath(RESOURCES_PATH, "example_mod.F90")])
 
   @test length(parsed_modules) == 1
 
