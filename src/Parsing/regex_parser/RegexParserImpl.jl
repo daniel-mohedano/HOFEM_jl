@@ -15,7 +15,7 @@ function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vect
 
     lines = [strip(line) for line in readlines(file)]
     modinfo = _parse(lines)
-    if modinfo !== Nothing
+    if modinfo !== nothing
       push!(modules, modinfo)
     end
   end
@@ -24,39 +24,41 @@ function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vect
 end
 
 # Parse a file
-function _parse(lines::Vector{<:AbstractString})::Union{FModule,Nothing}
+function _parse(lines::Vector{<:AbstractString})::Union{Module,Nothing}
   while length(lines) > 0
     line = popfirst!(lines)
 
     m = match(MODULE_START::MatchType, line)
     if m !== nothing
-      return _parse_module(m["name"], lines)
+      return _parse_module(m, lines)
     end
   end
 
-  return Nothing
+  return nothing
 end
 
 # Parse a module, which can contain:
 # - Derived type definitions
 # - Global variables
 # - Procedures (subroutines and functions)
-function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::Union{FModule,Nothing}
-  types = FDerived[]
-  variables = FModuleVar[]
-  procedures = FProcedure[]
+function _parse_module(original_match::RegexMatch, lines::Vector{<:AbstractString})::Module
+  name = original_match["name"]
+
+  types = DerivedType[]
+  variables = ModuleVariable[]
+  procedures = Procedure[]
 
   while length(lines) > 0
     line = popfirst!(lines)
 
     m = match(MODULE_END::MatchType, line)
     if m !== nothing && m["name"] == name
-      return FModule(name, types, variables, procedures)
+      return Module(name, types, variables, procedures)
     end
 
     m = match(TYPE_START::MatchType, line)
     if m !== nothing
-      parsed_type = _parse_type(m["name"], line, lines)
+      parsed_type = _parse_derived_type(m, lines)
       if parsed_type !== nothing
         push!(types, parsed_type)
       end
@@ -65,14 +67,14 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
 
     m = match(GLOBAL_VAR::MatchType, line)
     if m !== nothing
-      var = FVar(m["name"], FDerived(m["derived_type"], FVar[]), get_var_attributes(line))
-      push!(variables, FModuleVar(var, get_visibility(line)))
+      var = Variable(m["name"], DerivedType(m["type"]), get_var_attributes(m["attrs"]))
+      push!(variables, ModuleVariable(var, get_visibility(m["attrs"])))
       continue
     end
 
     m = match(SUBROUTINE_START::MatchType, line)
     if m !== nothing
-      parsed_proc = _parse_procedure(m["name"], m["args"], nothing, nothing, m["attribute"], line, lines)
+      parsed_proc = _parse_procedure(m, false, lines)
       if parsed_proc !== nothing
         push!(procedures, parsed_proc)
       end
@@ -81,7 +83,7 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
 
     m = match(FUNCTION_START::MatchType, line)
     if m !== nothing
-      parsed_proc = _parse_procedure(m["name"], m["args"], m["return_type"], m["return_var"], m["attribute"], line, lines)
+      parsed_proc = _parse_procedure(m, true, lines)
       if parsed_proc !== nothing
         push!(procedures, parsed_proc)
       end
@@ -89,93 +91,124 @@ function _parse_module(name::AbstractString, lines::Vector{<:AbstractString})::U
     end
   end
 
-  return Nothing
+  return Module(name, types, variables, procedures)
 end
 
 # Parse a derived type definition and extract:
 # - Members
 # - Attributes
-function _parse_type(name::AbstractString, type_definition_line::AbstractString, lines::Vector{<:AbstractString})::Union{FDerived,Nothing}
-  members = FVar[]
-  attributes = get_type_attributes(type_definition_line)
+function _parse_derived_type(original_match::RegexMatch, lines::Vector{<:AbstractString})::DerivedType
+  name = original_match["name"]
+
+  members = Variable[]
+  attributes = get_type_attributes(original_match["attrs"])
 
   while length(lines) > 0
     line = popfirst!(lines)
     m = match(TYPE_END::MatchType, line)
     if m !== nothing && m["name"] == name
-      return FDerived(name, members, attributes)
+      return DerivedType(name, members, attributes)
     end
 
     m = match(VARIABLE::MatchType, line)
     if m !== nothing
-      var_type = get_type(m["type"])
-      var_name = m["name"]
-      var_attrs = get_var_attributes(line)
-      push!(members, FVar(var_name, var_type, var_attrs))
+      variables = _parse_variables(m)
+      append!(members, variables)
     end
   end
 
-  return Nothing
+  return DerivedType(name, members, attributes)
 end
 
 # Parse a procedure (subroutine or function) and extract:
 # - Attributes
 # - Arguments
-function _parse_procedure(name::AbstractString, args_str::AbstractString, return_type_str::Union{AbstractString,Nothing}, return_var::Union{AbstractString,Nothing}, attribute::Union{AbstractString,Nothing}, proc_line::AbstractString, lines::Vector{<:AbstractString})::Union{FProcedure,Nothing}
-  return_type = nothing
+function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::Vector{<:AbstractString})::Procedure
+  name = original_match["name"]
 
-  # Parse procedure attributes
-  is_pure = attribute == "PURE"
-  is_elemental = attribute == "ELEMENTAL"
-  vis = get_visibility(proc_line)
+  return_type = haskey(original_match, "return_type") && !isnothing(original_match["return_type"]) ? get_type(original_match["return_type"]) : nothing
+  return_var = haskey(original_match, "return_var") ? original_match["return_var"] : nothing
 
-  # Parse arguments names
-  args = FVar[]
-  args_names = String[]
+  attrs = original_match["attr"]
+  is_pure = false
+  is_elemental = false
+  vis = Public::Visibility
+  if attrs !== nothing
+    if occursin(r"PURE"i, attrs)
+      is_pure = true
+    end
+    if occursin(r"ELEMENTAL"i, attrs)
+      is_elemental = true
+    end
+  end
+
+  args_str = original_match["args"]
+  args = Variable[]
+  arg_names = String[]
   if !isempty(args_str)
     for arg in split(args_str, ",")
       arg = strip(arg)
       if !isempty(arg)
-        push!(args_names, arg)
+        push!(arg_names, arg)
       end
     end
   end
 
-  # Look for argument declarations and end of procedure
-  end_pattern = occursin(r"FUNCTION", proc_line) ? FUNCTION_END::MatchType : SUBROUTINE_END::MatchType
+  end_pattern = is_function ? FUNCTION_END::MatchType : SUBROUTINE_END::MatchType
 
   while length(lines) > 0
     line = popfirst!(lines)
 
-    # Check for procedure end
     m = match(end_pattern, line)
     if m !== nothing && m["name"] == name
-      return FProcedure(name, args, return_type, is_pure, is_elemental, vis)
+      return Procedure(name, args, return_type, is_pure, is_elemental, vis)
     end
 
     # Look for argument declarations to update their types and attributes
-    for arg in copy(args_names)
-      if occursin(arg, line)
-        m = match(VARIABLE::MatchType, line)
-        if m !== nothing
-          var_type = get_type(m["type"])
-          var_attrs = get_var_attributes(line)
-          # Update the argument's type and attributes
-          push!(args, FVar(arg, var_type, var_attrs))
-          # Remove the found argument from the list
-          filter!(x -> x != arg, args_names)
-        end
-      end
+    m = match(VARIABLE::MatchType, line)
+    if isnothing(m)
+      continue
     end
 
-    if return_var !== nothing && occursin(return_var, line)
-      m = match(VARIABLE::MatchType, line)
-      if m !== nothing && m["name"] == return_var
-        return_type = get_type(m["type"])
+    variables = _parse_variables(m)
+    for variable in variables
+      if variable.name in arg_names
+        push!(args, variable)
+      elseif is_function && isnothing(return_type) && (variable.name == return_var || variable.name == name)
+        return_type = variable.type
       end
     end
   end
 
+  return Procedure(name, args, return_type, is_pure, is_elemental, vis)
+end
 
-  return Nothing
+function _parse_variables(original_match::RegexMatch)::Vector{Variable}
+  variables = Variable[]
+
+  shared_type = get_type(original_match["type"])
+  shared_attrs = get_var_attributes(original_match["attrs"])
+
+  for var in split(original_match["names"], r"\s*,\s*(?![^()]*\))")
+    m = match(r"^\s*(?<name>\w+)(\((?<dims>[^)]*)\))?\s*(?:=.*)?$", strip(var))
+    if m !== nothing
+      name = m["name"]
+      dim_match = m["dims"]
+
+      if dim_match !== nothing
+        dims = [strip(dim) for dim in split(dim_match, ",")]
+        new_attrs = VariableAttrs(
+          shared_attrs.is_parameter,
+          shared_attrs.is_allocatable,
+          shared_attrs.is_pointer,
+          dims,
+          shared_attrs.intent)
+        push!(variables, Variable(name, shared_type, new_attrs))
+      else
+        push!(variables, Variable(name, shared_type, shared_attrs))
+      end
+    end
+  end
+
+  return variables
 end

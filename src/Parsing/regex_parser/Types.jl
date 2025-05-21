@@ -4,75 +4,68 @@
 #  return :($eval($__module__, Expr(:export, map(Symbol, instances($enum))...)))
 #end
 
-abstract type AbstractFType end
+abstract type AbstractType end
 
-# Visibility of module members
 @enum Visibility Public Private
 #@exportinstances Visibility
 
-# Variable attributes
-struct FVarAttributes
+struct VariableAttrs
   is_parameter::Bool
   is_allocatable::Bool
   is_pointer::Bool
   dimensions::Union{Vector{Union{Int,AbstractString}},Nothing}
   intent::Union{AbstractString,Nothing}  # in, out, inout
 end
-FVarAttributes() = FVarAttributes(false, false, false, nothing, nothing)
+VariableAttrs() = VariableAttrs(false, false, false, nothing, nothing)
 
-# Intrinsic Fortran type with kind parameter
-struct FIntrinsic <: AbstractFType
+struct IntrinsicType <: AbstractType
   name::AbstractString
   kind::Union{Int,AbstractString,Nothing}
 end
-FIntrinsic(name::AbstractString) = FIntrinsic(name, nothing)
+IntrinsicType(name::AbstractString) = IntrinsicType(name, nothing)
 
 # Fortran variable
-struct FVar{T<:AbstractFType}
+struct Variable{T<:AbstractType}
   name::AbstractString
   type::T
-  attributes::FVarAttributes
+  attributes::VariableAttrs
 end
-FVar(name::AbstractString, type::T) where {T<:AbstractFType} = FVar{T}(name, type, FVarAttributes())
+Variable(name::AbstractString, type::T) where {T<:AbstractType} = Variable{T}(name, type, VariableAttrs())
 
-# Derived type attributes
-struct FDerivedAttributes
+struct DerivedTypeAttrs
   is_abstract::Bool
   is_public::Bool
   extends::Union{AbstractString,Nothing}  # Name of the parent type if extends
 end
-FDerivedAttributes() = FDerivedAttributes(false, true, nothing)
+DerivedTypeAttrs() = DerivedTypeAttrs(false, true, nothing)
 
-# Derived Fortran type with members
-struct FDerived <: AbstractFType
+struct DerivedType <: AbstractType
   name::AbstractString
-  members::Vector{FVar}
-  attributes::FDerivedAttributes
+  members::Vector{Variable}
+  attributes::DerivedTypeAttrs
 end
-FDerived(name::AbstractString, members::Vector{FVar}) = FDerived(name, members, FDerivedAttributes())
+DerivedType(name::AbstractString, members::Vector{Variable}) = DerivedType(name, members, DerivedTypeAttrs())
+DerivedType(name::AbstractString) = DerivedType(name, Variable[], DerivedTypeAttrs())
 
-# Generic Fortran procedure (function or subroutine)
-struct FProcedure
+struct Procedure
   name::AbstractString
-  args::Vector{FVar}
-  ret::Union{<:AbstractFType,Nothing}  # Nothing for subroutines
+  args::Vector{Variable}
+  ret::Union{<:AbstractType,Nothing}  # Nothing for subroutines
   is_pure::Bool
   is_elemental::Bool
   visibility::Visibility
 end
-FProcedure(name::AbstractString, args::Vector{FVar}, ret::Union{<:AbstractFType,Nothing}=nothing) = FProcedure(name, args, ret, false, false, Public)
+Procedure(name::AbstractString, args::Vector{Variable}, ret::Union{<:AbstractType,Nothing}=nothing) = Procedure(name, args, ret, false, false, Public)
 
-# Module variable or constant
-struct FModuleVar
-  var::FVar
+struct ModuleVariable
+  var::Variable
   visibility::Visibility
 end
 
-# Fortran module
-struct FModule <: AbstractModule
+struct Module <: AbstractModule
   name::AbstractString
-  types::Vector{FDerived}
-  variables::Vector{FModuleVar}
-  procedures::Vector{FProcedure}
+  types::Vector{DerivedType}
+  variables::Vector{ModuleVariable}
+  procedures::Vector{Procedure}
 end
-FModule(name::AbstractString) = FModule(name, FDerived[], FModuleVar[], FProcedure[])
+Module(name::AbstractString) = Module(name, DerivedType[], ModuleVariable[], Procedure[])

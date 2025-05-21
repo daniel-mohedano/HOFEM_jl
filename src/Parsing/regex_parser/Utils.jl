@@ -12,55 +12,44 @@
 end
 
 const _REGEXES = Dict(
-  MODULE_START => r"MODULE (?<name>\w+)",
-  MODULE_END => r"END MODULE (?<name>\w+)",
-  TYPE_START => r"TYPE\s*(?:,\s*(?:(?:ABSTRACT|PUBLIC|PRIVATE|EXTENDS\(\w+\))\s*,?\s*)*)?::\s*(?<name>\w+)",
-  TYPE_END => r"END TYPE (?<name>\w+)",
-  VARIABLE => r"(?<type>\w+(?:\([^)]*\))?)\s*(?:,\s*(?:PARAMETER|ALLOCATABLE|POINTER|TARGET|INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\))\s*,?\s*)*::\s*(?<name>\w+)(?:\([\w:,]*\))?(?:\s*=\s*[^!]*)?",
-  GLOBAL_VAR => r"TYPE\((?<derived_type>\w+)\)(?:\s*,\s*(?:TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))?\s*::\s*(?<name>\w+)",
-  SUBROUTINE_START => r"(?<attribute>PURE|ELEMENTAL)?\s+SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(?:\s*BIND(C))?",
-  SUBROUTINE_END => r"END SUBROUTINE (?<name>\w+)",
-  FUNCTION_START => r"(?:(?<attribute>PURE|ELEMENTAL)\s*)?(?<return_type>\w+(?:\([^)]*\))?)?\s+FUNCTION\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(?:\s*RESULT\((?<return_var>\w+)\))?(?:\s*BIND(C))?",
-  FUNCTION_END => r"END FUNCTION (?<name>\w+)",
+  MODULE_START => r"^\s*MODULE\s+(?<name>\w+)\s*"i,
+  MODULE_END => r"^\s*END\s+MODULE\s+(?<name>\w+)\s*"i,
+  TYPE_START => r"^\s*TYPE(?<attrs>(\s*,\s*(EXTENDS\(\s*\w+\s*\)|ABSTRACT|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
+  TYPE_END => r"^\s*END\s+TYPE\s+(?<name>\w+)\s*"i,
+  VARIABLE => r"^\s*(?<type>\w+(?:\([^)]*\))?)(?<attrs>(?:\s*,\s*(?:INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\)|PARAMETER|ALLOCATABLE|POINTER|TARGET))*)?\s*::\s*(?<names>(?:\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)(?:\s*,\s*\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)*)"i,
+  GLOBAL_VAR => r"^\s*TYPE\((?<type>\w+)\)(?<attrs>(\s*,\s*(TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i, # todo: check that no dimensions here don't hurt
+  SUBROUTINE_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*BIND(C))?\s*"i, # todo: check visibility
+  SUBROUTINE_END => r"^\s*END\s+SUBROUTINE\s+(?<name>\w+)\s*"i,
+  FUNCTION_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?((?<return_type>\w+(\([^)]*\))?)\s+)?FUNCTION\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*RESULT\((?<return_var>\w+)\))?(\s*BIND(C))?\s*"i,
+  FUNCTION_END => r"^\s*END\s+FUNCTION\s+(?<name>\w+)\s*"i,
 )
 
-# todo: handle multiple variables in the same line, separated by commas
-
 function Base.match(match_type::MatchType, line::AbstractString)::Union{RegexMatch,Nothing}
-  _START = r"^\s*"
-  _END = r"\s*$"
-  match_str = _START * _REGEXES[match_type] * _END
-  return match(match_str, line)
+  return match(_REGEXES[match_type], line)
 end
 
-# Parses type specifications
-function get_type(spec::AbstractString)::AbstractFType
-  # Check if it's a derived type
-  m = match(r"TYPE\((?<type>\w+)\)", spec)
+function get_type(type::AbstractString)::AbstractType
+  m = match(r"TYPE\((?<type>\w+)\)"i, type)
   if m !== nothing
-    return FDerived(m["type"], FVar[])
+    return DerivedType(m["type"])
   end
 
-  # Check for kind specification
-  m = match(r"(?<type>\w+)(?:\(KIND\s*=\s*(?<kind>\w+|\d+)\))?", spec)
+  m = match(r"(?<type>\w+)(?:\(KIND\s*=\s*(?<kind>\w+|\d+)\))?"i, type)
   if m !== nothing
-    return FIntrinsic(m["type"], m["kind"])
+    return IntrinsicType(m["type"], m["kind"])
   end
 
   # Default case
-  return FIntrinsic(spec)
+  return IntrinsicType(type)
 end
 
-# Extracts variable attributes
-# Used for derived type members, global vars and procedure args
-function get_var_attributes(line::AbstractString)::FVarAttributes
-  is_parameter = occursin(r"PARAMETER", line)
-  is_allocatable = occursin(r"ALLOCATABLE", line)
-  is_pointer = occursin(r"POINTER", line)
+function get_var_attributes(attrs::AbstractString)::VariableAttrs
+  is_parameter = occursin(r"\s*,\s*PARAMETER"i, attrs)
+  is_allocatable = occursin(r"\s*,\s*ALLOCATABLE"i, attrs)
+  is_pointer = occursin(r"\s*,\s*POINTER"i, attrs)
 
   dimensions = nothing
-  # Check for dimensions in DIMENSION attribute
-  dim_match = match(r"DIMENSION\((?<dims>[^)]*)\)", line)
+  dim_match = match(r"DIMENSION\((?<dims>[^)]*)\)"i, attrs)
   if dim_match !== nothing
     # Parse dimensions into a vector
     dims = String[]
@@ -70,47 +59,41 @@ function get_var_attributes(line::AbstractString)::FVarAttributes
     dimensions = dims
   end
 
-  # Check for dimensions after variable name
-  if dimensions === nothing
-    var_dims = match(r"::\s*\w+\((?<dims>[\w:,\s]+)\)", line)
-    if var_dims !== nothing
-      dims = String[]
-      for dim in split(var_dims["dims"], ",")
-        push!(dims, strip(dim))
-      end
-      dimensions = dims
-    end
-  end
-
-  # Check for intent
   intent = nothing
-  intent_match = match(r"INTENT\((?<intent>(IN|OUT|INOUT))\)", line)
+  intent_match = match(r"INTENT\((?<intent>(IN|OUT|INOUT))\)"i, attrs)
   if intent_match !== nothing
     intent = lowercase(intent_match["intent"])
   end
 
-  return FVarAttributes(is_parameter, is_allocatable, is_pointer, dimensions, intent)
+  return VariableAttrs(is_parameter, is_allocatable, is_pointer, dimensions, intent)
 end
 
-# Extracts type attributes
-function get_type_attributes(line::AbstractString)::FDerivedAttributes
-  # Check for abstract
-  is_abstract = occursin(r"ABSTRACT", line)
-
-  # Check for visibility (default is public)
-  is_public = !occursin(r"PRIVATE", line)
-
-  # Check for extends
+function get_type_attributes(attributes::AbstractString)::DerivedTypeAttrs
+  is_abstract = false
+  is_public = true
   extends = nothing
-  extends_match = match(r"EXTENDS\((?<extends>\w+)\)", line)
-  if extends_match !== nothing
-    extends = extends_match["extends"]
+
+  for attr in split(attributes, ",")
+    if isempty(attr)
+      continue
+    end
+
+    attr = strip(attr)
+    if lowercase(attr) == "abstract"
+      is_abstract = true
+    elseif lowercase(attr) == "private"
+      is_public = false
+    else
+      match_obj = match(r"EXTENDS\((?<type>\w+)\)"i, attr)
+      if match_obj !== nothing
+        extends = match_obj["type"]
+      end
+    end
   end
 
-  return FDerivedAttributes(is_abstract, is_public, extends)
+  return DerivedTypeAttrs(is_abstract, is_public, extends)
 end
 
-# Parses visibility
-function get_visibility(line::AbstractString)::Visibility
-  return occursin(r"PRIVATE", line) ? Private::Visibility : Public::Visibility
+function get_visibility(attrs::AbstractString)::Visibility
+  return occursin(r"\s*,\s*PRIVATE"i, attrs) ? Private::Visibility : Public::Visibility
 end

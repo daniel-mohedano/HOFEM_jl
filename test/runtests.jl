@@ -10,9 +10,11 @@ else
 end
 
 if all_tests || "regex" in ARGS
+  println("Executing RegexParserImplTest.jl")
   include("parsing/RegexParserImplTest.jl")
 end
 
 if all_tests || "ast" in ARGS
+  println("Executing ASTParserImplTest.jl")
   include("parsing/ASTParserImplTest.jl")
 end
