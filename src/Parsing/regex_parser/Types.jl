@@ -13,16 +13,17 @@ struct VariableAttrs
   is_parameter::Bool
   is_allocatable::Bool
   is_pointer::Bool
-  dimensions::Union{Vector{Union{Int,AbstractString}},Nothing}
+  dimensions::Union{Vector{AbstractString},Nothing}
   intent::Union{AbstractString,Nothing}  # in, out, inout
 end
 VariableAttrs() = VariableAttrs(false, false, false, nothing, nothing)
 
 struct IntrinsicType <: AbstractType
   name::AbstractString
-  kind::Union{Int,AbstractString,Nothing}
+  kind::Union{AbstractString,Nothing}
+  len::Union{AbstractString,Nothing}
 end
-IntrinsicType(name::AbstractString) = IntrinsicType(name, nothing)
+IntrinsicType(name::AbstractString) = IntrinsicType(name, nothing, nothing)
 
 # Fortran variable
 struct Variable{T<:AbstractType}
@@ -50,7 +51,7 @@ DerivedType(name::AbstractString) = DerivedType(name, Variable[], DerivedTypeAtt
 struct Procedure
   name::AbstractString
   args::Vector{Variable}
-  ret::Union{<:AbstractType,Nothing}  # Nothing for subroutines
+  ret::Union{Variable,Nothing}  # Nothing for subroutines
   is_pure::Bool
   is_elemental::Bool
   visibility::Visibility

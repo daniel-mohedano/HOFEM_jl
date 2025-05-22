@@ -15,7 +15,7 @@ function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vect
 
     lines = [strip(line) for line in readlines(file)]
     modinfo = _parse(lines)
-    if modinfo !== nothing
+    if !isnothing(modinfo)
       push!(modules, modinfo)
     end
   end
@@ -29,7 +29,7 @@ function _parse(lines::Vector{<:AbstractString})::Union{Module,Nothing}
     line = popfirst!(lines)
 
     m = match(MODULE_START::MatchType, line)
-    if m !== nothing
+    if !isnothing(m)
       return _parse_module(m, lines)
     end
   end
@@ -52,39 +52,39 @@ function _parse_module(original_match::RegexMatch, lines::Vector{<:AbstractStrin
     line = popfirst!(lines)
 
     m = match(MODULE_END::MatchType, line)
-    if m !== nothing && m["name"] == name
+    if !isnothing(m) && m["name"] == name
       return Module(name, types, variables, procedures)
     end
 
     m = match(TYPE_START::MatchType, line)
-    if m !== nothing
+    if !isnothing(m)
       parsed_type = _parse_derived_type(m, lines)
-      if parsed_type !== nothing
+      if !isnothing(parsed_type)
         push!(types, parsed_type)
       end
       continue
     end
 
     m = match(GLOBAL_VAR::MatchType, line)
-    if m !== nothing
+    if !isnothing(m)
       var = Variable(m["name"], DerivedType(m["type"]), get_var_attributes(m["attrs"]))
       push!(variables, ModuleVariable(var, get_visibility(m["attrs"])))
       continue
     end
 
     m = match(SUBROUTINE_START::MatchType, line)
-    if m !== nothing
+    if !isnothing(m)
       parsed_proc = _parse_procedure(m, false, lines)
-      if parsed_proc !== nothing
+      if !isnothing(parsed_proc)
         push!(procedures, parsed_proc)
       end
       continue
     end
 
     m = match(FUNCTION_START::MatchType, line)
-    if m !== nothing
+    if !isnothing(m)
       parsed_proc = _parse_procedure(m, true, lines)
-      if parsed_proc !== nothing
+      if !isnothing(parsed_proc)
         push!(procedures, parsed_proc)
       end
       continue
@@ -106,12 +106,12 @@ function _parse_derived_type(original_match::RegexMatch, lines::Vector{<:Abstrac
   while length(lines) > 0
     line = popfirst!(lines)
     m = match(TYPE_END::MatchType, line)
-    if m !== nothing && m["name"] == name
+    if !isnothing(m) && m["name"] == name
       return DerivedType(name, members, attributes)
     end
 
     m = match(VARIABLE::MatchType, line)
-    if m !== nothing
+    if !isnothing(m)
       variables = _parse_variables(m)
       append!(members, variables)
     end
@@ -127,13 +127,17 @@ function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::
   name = original_match["name"]
 
   return_type = haskey(original_match, "return_type") && !isnothing(original_match["return_type"]) ? get_type(original_match["return_type"]) : nothing
-  return_var = haskey(original_match, "return_var") ? original_match["return_var"] : nothing
+  return_var_name = haskey(original_match, "return_var") && !isnothing(original_match["return_var"]) ? original_match["return_var"] : name
+  return_variable = nothing
+  if !isnothing(return_type)
+    return_variable = Variable(return_var_name, return_type, VariableAttrs())
+  end
 
   attrs = original_match["attr"]
   is_pure = false
   is_elemental = false
   vis = Public::Visibility
-  if attrs !== nothing
+  if !isnothing(attrs)
     if occursin(r"PURE"i, attrs)
       is_pure = true
     end
@@ -160,8 +164,8 @@ function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::
     line = popfirst!(lines)
 
     m = match(end_pattern, line)
-    if m !== nothing && m["name"] == name
-      return Procedure(name, args, return_type, is_pure, is_elemental, vis)
+    if !isnothing(m)
+      return Procedure(name, args, return_variable, is_pure, is_elemental, vis)
     end
 
     # Look for argument declarations to update their types and attributes
@@ -174,13 +178,13 @@ function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::
     for variable in variables
       if variable.name in arg_names
         push!(args, variable)
-      elseif is_function && isnothing(return_type) && (variable.name == return_var || variable.name == name)
-        return_type = variable.type
+      elseif is_function && isnothing(return_type) && variable.name == return_var_name
+        return_variable = variable
       end
     end
   end
 
-  return Procedure(name, args, return_type, is_pure, is_elemental, vis)
+  return Procedure(name, args, return_variable, is_pure, is_elemental, vis)
 end
 
 function _parse_variables(original_match::RegexMatch)::Vector{Variable}
@@ -191,11 +195,11 @@ function _parse_variables(original_match::RegexMatch)::Vector{Variable}
 
   for var in split(original_match["names"], r"\s*,\s*(?![^()]*\))")
     m = match(r"^\s*(?<name>\w+)(\((?<dims>[^)]*)\))?\s*(?:=.*)?$", strip(var))
-    if m !== nothing
+    if !isnothing(m)
       name = m["name"]
       dim_match = m["dims"]
 
-      if dim_match !== nothing
+      if !isnothing(dim_match)
         dims = [strip(dim) for dim in split(dim_match, ",")]
         new_attrs = VariableAttrs(
           shared_attrs.is_parameter,

@@ -62,5 +62,9 @@ MODULE example_mod
     c = a + b - d
     r = c * a
   end function
+
+  CHARACTER(LEN=5) FUNCTION char_func()
+
+  END FUNCTION char_func
   
 END MODULE example_mod

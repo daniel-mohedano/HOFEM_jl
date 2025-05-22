@@ -8,13 +8,11 @@ using Test
   @test length(parsed_modules) == 1
 
   mod = parsed_modules[1]
-  @test mod !== nothing
+  @test !isnothing(mod)
   @test mod.name == "example_mod"
 
-  # Test types parsing
+  # Test derived types parsing
   @test length(mod.types) == 2
-
-  # Test derived_type
   derived_type = mod.types[1]
   @test derived_type.name == "derived_type"
   @test derived_type.attributes.is_abstract == true
@@ -27,7 +25,6 @@ using Test
     @test m.type.kind == "8"
   end
 
-  # Test extended_type
   extended_type = mod.types[2]
   @test extended_type.name == "extended_type"
   @test extended_type.attributes.is_abstract == false
@@ -52,7 +49,7 @@ using Test
   @test global_var.visibility == HOFEM_jl.Parsing.Public
 
   # Test procedures
-  @test length(mod.procedures) == 5
+  @test length(mod.procedures) == 6
 
   # Test distance function
   distance = mod.procedures[1]
@@ -60,14 +57,15 @@ using Test
   @test distance.is_pure == true
   @test distance.is_elemental == false
   @test length(distance.args) == 2
+  @test Set([var.name for var in distance.args]) == Set(["p1", "p2"])
   for arg in distance.args
     @test arg.type isa HOFEM_jl.Parsing.DerivedType
     @test arg.type.name == "derived_type"
     @test lowercase(arg.attributes.intent) == "in"
   end
-  @test distance.ret isa HOFEM_jl.Parsing.IntrinsicType
-  @test distance.ret.name == "REAL"
-  @test distance.ret.kind == "8"
+  @test distance.ret.type isa HOFEM_jl.Parsing.IntrinsicType
+  @test distance.ret.type.name == "REAL"
+  @test distance.ret.type.kind == "8"
 
   # Test other function
   other = mod.procedures[2]
@@ -75,18 +73,33 @@ using Test
   @test other.is_pure == false
   @test other.is_elemental == false
   @test length(other.args) == 2
+  @test Set([var.name for var in other.args]) == Set(["x", "y"])
   for arg in other.args
     @test arg.type isa HOFEM_jl.Parsing.IntrinsicType
     @test arg.type.name == "REAL"
+    @test arg.type.kind == "8"
   end
-  @test other.ret isa HOFEM_jl.Parsing.IntrinsicType
-  @test other.ret.name == "INTEGER"
+  @test other.ret.type isa HOFEM_jl.Parsing.IntrinsicType
+  @test other.ret.type.name == "INTEGER"
 
   # Test calc_excitation_vectorial_3D
   calc = mod.procedures[3]
   @test calc.name == "calc_excitation_vectorial_3D"
   @test length(calc.args) == 5
-
+  @test Set([var.name for var in calc.args]) == Set(["mesh", "elemID", "polynomial", "gaussPoint", "rhs"])
+  @test first(x for x in calc.args if x.name == "mesh").type isa HOFEM_jl.Parsing.DerivedType
+  @test first(x for x in calc.args if x.name == "mesh").type.name == "MeshObject"
+  @test first(x for x in calc.args if x.name == "elemID").type isa HOFEM_jl.Parsing.IntrinsicType
+  @test first(x for x in calc.args if x.name == "elemID").type.name == "INTEGER"
+  @test first(x for x in calc.args if x.name == "polynomial").type isa HOFEM_jl.Parsing.IntrinsicType
+  @test first(x for x in calc.args if x.name == "polynomial").type.name == "REAL"
+  @test first(x for x in calc.args if x.name == "polynomial").type.kind == "DBL"
+  @test first(x for x in calc.args if x.name == "polynomial").attributes.is_pointer == true
+  @test first(x for x in calc.args if x.name == "polynomial").attributes.dimensions == [":", ":", ":", ":"]
+  @test calc.ret.type isa HOFEM_jl.Parsing.IntrinsicType
+  @test calc.ret.type.name == "COMPLEX"
+  @test calc.ret.type.kind == "DBL"
+  @test calc.ret.attributes.dimensions == ["3"]
 
   # Test normalize subroutine
   normalize = mod.procedures[4]
@@ -97,11 +110,26 @@ using Test
   @test normalize.args[1].type isa HOFEM_jl.Parsing.DerivedType
   @test normalize.args[1].type.name == "derived_type"
   @test lowercase(normalize.args[1].attributes.intent) == "inout"
-  @test normalize.ret === nothing
+  @test isnothing(normalize.ret)
 
   # Test f 
   f = mod.procedures[5]
   @test f.name == "f"
   @test length(f.args) == 2
+  for arg in f.args
+    @test arg.type isa HOFEM_jl.Parsing.IntrinsicType
+    @test arg.type.name == "integer"
+    @test arg.attributes.intent == "in"
+  end
+  @test f.ret.type isa HOFEM_jl.Parsing.IntrinsicType
+  @test f.ret.type.name == "integer"
+
+  # Test char_func
+  char_func = mod.procedures[6]
+  @test char_func.name == "char_func"
+  @test length(char_func.args) == 0
+  @test char_func.ret.type isa HOFEM_jl.Parsing.IntrinsicType
+  @test char_func.ret.type.name == "CHARACTER"
+  @test char_func.ret.type.len == "5"
 
 end
