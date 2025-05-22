@@ -1,4 +1,3 @@
-include("Types.jl")
 include("Utils.jl")
 
 struct RegexParserImpl <: AbstractParser
