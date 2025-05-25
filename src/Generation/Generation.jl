@@ -325,5 +325,3 @@ Parse the module contained in the Fortran file provided.
 #    return new_string
 #  end
 #end
-
-end #module
