@@ -2,12 +2,14 @@ module Generation
 include("Templates.jl")
 
 using Dates
-import ..Parsing: Module, DerivedType, ModuleVariable, Variable, fortran_type, julia_type
+import ..Parsing: AbstractModule, DerivedType, ModuleVariable, Variable, fortran_type, julia_type, MatchType, SUBROUTINE_START, FUNCTION_START
+
+export generate_interfaces
 
 """
     generate_interfaces(modules::Vector{Module}, output_path::AbstractString)
 """
-function generate_interfaces(modules::Vector{<:Module}, output_path::AbstractString)
+function generate_interfaces(modules::Vector{<:AbstractModule}, output_path::AbstractString)
   if !(isdir(output_path))
     @warn "Invalid interface path provided `$output_path`, not a directory."
     return
@@ -24,7 +26,7 @@ end
 
 Build the Fortran interface for the module provided and save it to the given path.
 """
-function build_fortran_interface(mod::Module, output_path::AbstractString)
+function build_fortran_interface(mod::AbstractModule, output_path::AbstractString)
   interface_mod_name = mod.name * "_jl_interface"
   interface_file_name = joinpath(output_path, interface_mod_name * ".F90")
 
@@ -66,7 +68,7 @@ end
 
 Build the Julia interface for the module provided and save it to the given path.
 """
-function build_julia_interface(mod::Module, output_path::AbstractString)
+function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
   interface_mod_name = mod.name * "_jl_interface"
   interface_file_name = joinpath(output_path, interface_mod_name * ".jl")
 
@@ -82,15 +84,15 @@ function build_julia_interface(mod::Module, output_path::AbstractString)
   # Derived type getters and setters
   for derived_type in mod.types
     for member in derived_type.members
-      module_code *= build_member_access(derived_type.name, member, custom_routines, FORTRAN)
+      module_code *= build_member_access(derived_type.name, member, custom_routines, JULIA)
     end
     # Custom print function
-    module_code *= build_type_print(derived_type, custom_routines, FORTRAN)
+    module_code *= build_type_print(derived_type, custom_routines, JULIA)
   end
 
   # Module variables
   for module_var in mod.variables
-    module_code *= build_module_var_access(module_var, custom_routines, FORTRAN)
+    module_code *= build_module_var_access(module_var, custom_routines, JULIA)
   end
 
   module_code = indent_code(module_code, 0, false)
@@ -102,12 +104,16 @@ function build_julia_interface(mod::Module, output_path::AbstractString)
   end
 end
 
-function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{AbstractString}, lang::Lang)::AbstractString
+function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
   interoperable_type = lang isa Fortran ? fortran_type : julia_type
 
   code = ""
   setter_name = t_setter_name(type_name, member.name, lang)
   getter_name = t_getter_name(type_name, member.name, lang)
+
+  if member.type isa DerivedType
+    return code
+  end
 
   if !(setter_name in custom_routines)
     if lowercase(member.type.name) == "CHAR" || lowercase(member.type.name) == "CHARACTER"
@@ -130,7 +136,7 @@ function build_member_access(type_name::AbstractString, member::Variable, custom
   return code
 end
 
-function build_module_var_access(module_var::ModuleVariable, custom_routines::Vector{AbstractString}, lang::Lang)::AbstractString
+function build_module_var_access(module_var::ModuleVariable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
   code = ""
   getter_name = t_getter_module_var_name(module_var.var.name)
   if !(getter_name in custom_routines)
@@ -141,7 +147,7 @@ function build_module_var_access(module_var::ModuleVariable, custom_routines::Ve
   return code
 end
 
-function build_type_print(type::DerivedType, custom_routines::Vector{AbstractString}, lang::Lang)::AbstractString
+function build_type_print(type::DerivedType, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
   code = ""
   printer_name = t_type_print_name(type.name)
   if !(printer_name in custom_routines)

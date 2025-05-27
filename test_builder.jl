@@ -12,5 +12,7 @@ using JSON3
 #], "src/Interfaces/")
 #
 #HOFEM_jl.generate_interfaces(["test/resources/example_mod.F90"], "src/Interfaces/")
-modules = HOFEM_jl.deserialize_ast(JSON3.read(read("temp.json", String)))
-@info modules
+
+parser = HOFEM_jl.RegexParserImpl()
+modules = HOFEM_jl.Parsing.parse(parser, ["test/resources/example_mod.F90"])
+HOFEM_jl.generate_interfaces(modules, ".")
