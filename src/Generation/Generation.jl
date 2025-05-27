@@ -1,6 +1,8 @@
+module Generation
 include("Templates.jl")
 
 using Dates
+import ..Parsing: Module, DerivedType, ModuleVariable, Variable, fortran_type, julia_type
 
 """
     generate_interfaces(modules::Vector{Module}, output_path::AbstractString)
@@ -249,3 +251,4 @@ function indent_code(code::AbstractString, num_tabs::Int, new_line::Bool)::Strin
     return new_string
   end
 end
+end # module

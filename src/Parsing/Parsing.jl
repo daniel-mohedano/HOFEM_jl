@@ -1,7 +1,6 @@
 module Parsing
 
-export AbstractParser, ASTParserImpl, RegexParserImpl, Module, parse
-
+export AbstractParser, ASTParserImpl, RegexParserImpl, Module, parse, AbstractModule
 include("ParserTypes.jl")
 include("regex_parser/RegexParserImpl.jl")
 include("ast_parser/ASTParserImpl.jl")
