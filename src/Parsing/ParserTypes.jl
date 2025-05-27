@@ -21,6 +21,30 @@ struct IntrinsicType <: AbstractType
 end
 IntrinsicType(name::AbstractString) = IntrinsicType(name, nothing, nothing)
 
+function fortran_type(type::IntrinsicType)
+  if lowercase(type.name) == "integer"
+    return "C_INT"
+  elseif lowercase(type.name) == "real"
+    return "C_DOUBLE"
+  elseif lowercase(type.name) == "logical"
+    return "C_BOOL"
+  else
+    return ""
+  end
+end
+
+function julia_type(type::IntrinsicType)
+  if lowercase(type.name) == "integer"
+    return "Cint"
+  elseif lowercase(type.name) == "real"
+    return "Cdouble"
+  elseif lowercase(type.name) == "logical"
+    return "Cuchar"
+  else
+    return ""
+  end
+end
+
 # Fortran variable
 struct Variable{T<:AbstractType}
   name::AbstractString
