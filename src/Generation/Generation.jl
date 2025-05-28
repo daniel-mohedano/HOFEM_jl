@@ -116,20 +116,12 @@ function build_member_access(type_name::AbstractString, member::Variable, custom
   end
 
   if !(setter_name in custom_routines)
-    if lowercase(member.type.name) == "CHAR" || lowercase(member.type.name) == "CHARACTER"
-      code *= t_setter_string(type_name, member.name, lang)
-    else
-      code *= t_setter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
-    end
+    code *= t_setter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
     code *= "\n"
   end
 
   if !(getter_name in custom_routines)
-    if lowercase(member.type.name) == "CHAR" || lowercase(member.type.name) == "CHARACTER"
-      code *= t_getter_string(type_name, member.name, lang)
-    else
-      code *= t_getter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
-    end
+    code *= t_getter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
     code *= "\n"
   end
 

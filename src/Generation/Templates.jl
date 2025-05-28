@@ -100,102 +100,102 @@ function t_getter_name(type_name::AbstractString, member_name::AbstractString, l
 end
 
 function t_setter(type_name::AbstractString, member_name::AbstractString, member_type::AbstractString, member_inter_type::AbstractString, lang::Fortran)::String
-  return """
-  SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
-      TYPE(C_PTR), VALUE :: data_c_ptr
-      $member_type($member_inter_type), VALUE :: val
-      TYPE($type_name), POINTER :: data
-      
-      CALL c_f_pointer(data_c_ptr, data)
-      data%$member_name = val
-  END SUBROUTINE $(t_setter_name(type_name, member_name, lang))
-  """
+  if lowercase(member_type) == "char" || lowercase(member_type) == "character"
+    return """
+    SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
+        TYPE(C_PTR), VALUE :: data_c_ptr
+        CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
+        TYPE($type_name), POINTER :: data
+        INTEGER :: i = 1
+
+        CALL c_f_pointer(data_c_ptr, data)
+        DO
+            IF ((val(i) == C_NULL_CHAR) .OR. (i == LENGTH)) EXIT
+            data%$member_name(i:i) = val(i)
+            i = i + 1
+        END DO
+        DO WHILE (i <= LENGTH)
+            data%$member_name(i:i) = " "
+            i = i + 1
+        END DO
+    END SUBROUTINE $(t_setter_name(type_name, member_name, lang))
+    """
+  else
+    return """
+    SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
+        TYPE(C_PTR), VALUE :: data_c_ptr
+        $member_type($member_inter_type), VALUE :: val
+        TYPE($type_name), POINTER :: data
+        
+        CALL c_f_pointer(data_c_ptr, data)
+        data%$member_name = val
+    END SUBROUTINE $(t_setter_name(type_name, member_name, lang))
+    """
+  end
 end
 
 function t_setter(type_name::AbstractString, member_name::AbstractString, member_type::AbstractString, member_inter_type::AbstractString, lang::Julia)::String
-  return """
-  function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)
-      @ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)::Cvoid
+  if lowercase(member_type) == "char" || lowercase(member_type) == "character"
+    return """
+    function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
+        @ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
+    end
+    """
+  else
+    return """
+    function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)
+        @ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)::Cvoid
+    end
+    """
   end
-  """
-end
-
-function t_setter_string(type_name::AbstractString, member_name::AbstractString, lang::Fortran)::String
-  return """
-  SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
-      TYPE(C_PTR), VALUE :: data_c_ptr
-      CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
-      TYPE($type_name), POINTER :: data
-      INTEGER :: i = 1
-
-      CALL c_f_pointer(data_c_ptr, data)
-      DO
-          IF ((val(i) == C_NULL_CHAR) .OR. (i == LENGTH)) EXIT
-          data%$member_name(i:i) = val(i)
-          i = i + 1
-      END DO
-      DO WHILE (i <= LENGTH)
-          data%$member_name(i:i) = " "
-          i = i + 1
-      END DO
-  END SUBROUTINE $(t_setter_name(type_name, member_name, lang))
-  """
-end
-
-function t_setter_string(type_name::AbstractString, member_name::AbstractString, lang::Julia)::String
-  return """
-  function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
-      @ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
-  end
-  """
 end
 
 function t_getter(type_name::AbstractString, member_name::AbstractString, member_type::AbstractString, member_inter_type::AbstractString, lang::Fortran)::String
-  return """
-  FUNCTION $(t_getter_name(type_name, member_name, lang))(data_c_ptr) BIND(C)
-      TYPE(C_PTR), VALUE :: data_c_ptr
-      $member_type($member_inter_type) :: $(t_getter_name(type_name, member_name, lang))
-      TYPE($type_name), POINTER :: data
-      
-      CALL c_f_pointer(data_c_ptr, data)
-      $(t_getter_name(type_name, member_name, lang)) = data%$member_name
-  END FUNCTION $(t_getter_name(type_name, member_name, lang))
-  """
+  if lowercase(member_type) == "char" || lowercase(member_type) == "character"
+    return """
+    SUBROUTINE $(t_getter_name(type_name, member_name, lang))(data_c_ptr, string) BIND(C)
+        TYPE(C_PTR), VALUE :: data_c_ptr
+        CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(INOUT) :: string
+        TYPE($type_name), POINTER :: data
+        INTEGER :: i = 1
+
+        CALL c_f_pointer(data_c_ptr, data)
+        DO
+            IF ((data%$member_name(i:i) == " ") .OR. (i == LENGTH)) EXIT
+            string(i) = data%$member_name(i:i)
+            i = i + 1
+        END DO
+        string(i) = C_NULL_CHAR
+    END SUBROUTINE $(t_getter_name(type_name, member_name, lang))
+    """
+  else
+    return """
+    FUNCTION $(t_getter_name(type_name, member_name, lang))(data_c_ptr) BIND(C)
+        TYPE(C_PTR), VALUE :: data_c_ptr
+        $member_type($member_inter_type) :: $(t_getter_name(type_name, member_name, lang))
+        TYPE($type_name), POINTER :: data
+        
+        CALL c_f_pointer(data_c_ptr, data)
+        $(t_getter_name(type_name, member_name, lang)) = data%$member_name
+    END FUNCTION $(t_getter_name(type_name, member_name, lang))
+    """
+  end
 end
 
 function t_getter(type_name::AbstractString, member_name::AbstractString, member_type::AbstractString, member_inter_type::AbstractString, lang::Julia)::String
-  return """
-  function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
-      return @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
+  if lowercase(member_type) == "char" || lowercase(member_type) == "character"
+    return """
+    function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
+        @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
+    end
+    """
+  else
+    return """
+    function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
+        return @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
+    end
+    """
   end
-  """
-end
-
-function t_getter_string(type_name::AbstractString, member_name::AbstractString, lang::Fortran)::String
-  return """
-  SUBROUTINE $(t_getter_name(type_name, member_name, lang))(data_c_ptr, string) BIND(C)
-      TYPE(C_PTR), VALUE :: data_c_ptr
-      CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(INOUT) :: string
-      TYPE($type_name), POINTER :: data
-      INTEGER :: i = 1
-
-      CALL c_f_pointer(data_c_ptr, data)
-      DO
-          IF ((data%$member_name(i:i) == " ") .OR. (i == LENGTH)) EXIT
-          string(i) = data%$member_name(i:i)
-          i = i + 1
-      END DO
-      string(i) = C_NULL_CHAR
-  END SUBROUTINE $(t_getter_name(type_name, member_name, lang))
-  """
-end
-
-function t_getter_string(type_name::AbstractString, member_name::AbstractString, lang::Julia)::String
-  return """
-  function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
-      @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
-  end
-  """
 end
 
 function t_getter_module_var(var_name::AbstractString, type_name::AbstractString, lang::Fortran)::String
