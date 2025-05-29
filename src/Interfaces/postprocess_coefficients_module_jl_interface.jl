@@ -4,13 +4,12 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 7 October 2024
+!> 29 May 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for postprocess_coefficients_module_jl_interface
 !----------------------------------------------------------------------------------------------------------------------
 """
-
 _HOFEM_LIB_PATH = get(ENV, "HOFEM_LIB_PATH", "")
 
 
