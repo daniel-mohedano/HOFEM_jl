@@ -17,8 +17,8 @@ const _REGEXES = Dict(
   TYPE_START => r"^\s*TYPE(?<attrs>(\s*,\s*(EXTENDS\(\s*\w+\s*\)|ABSTRACT|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
   TYPE_END => r"^\s*END\s+TYPE\s+(?<name>\w+)\s*"i,
   VARIABLE => r"^\s*(?<type>\w+(?:\([^)]*\))?)(?<attrs>(?:\s*,\s*(?:INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\)|PARAMETER|ALLOCATABLE|POINTER|TARGET))*)?\s*::\s*(?<names>(?:\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)(?:\s*,\s*\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)*)"i,
-  GLOBAL_VAR => r"^\s*TYPE\((?<type>\w+)\)(?<attrs>(\s*,\s*(TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i, # todo: check that no dimensions here don't hurt
-  SUBROUTINE_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*BIND(C))?\s*"i, # todo: check visibility
+  GLOBAL_VAR => r"^\s*TYPE\((?<type>\w+)\)(?<attrs>(\s*,\s*(TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
+  SUBROUTINE_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*BIND(C))?\s*"i,
   SUBROUTINE_END => r"^\s*END\s+SUBROUTINE(\s+(?<name>\w+))?\s*"i,
   FUNCTION_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?((?<return_type>\w+(\([^)]*\))?)\s+)?FUNCTION\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*RESULT\((?<return_var>\w+)\))?(\s*BIND(C))?\s*"i,
   FUNCTION_END => r"^\s*END\s+FUNCTION(\s+(?<name>\w+))?\s*"i,
@@ -47,6 +47,7 @@ function get_var_attributes(attrs::AbstractString)::VariableAttrs
   is_parameter = occursin(r"\s*,\s*PARAMETER"i, attrs)
   is_allocatable = occursin(r"\s*,\s*ALLOCATABLE"i, attrs)
   is_pointer = occursin(r"\s*,\s*POINTER"i, attrs)
+  is_target = occursin(r"\s*,\s*TARGET"i, attrs)
 
   dimensions = nothing
   dim_match = match(r"DIMENSION\((?<dims>[^)]*)\)"i, attrs)
@@ -65,7 +66,7 @@ function get_var_attributes(attrs::AbstractString)::VariableAttrs
     intent = lowercase(intent_match["intent"])
   end
 
-  return VariableAttrs(is_parameter, is_allocatable, is_pointer, dimensions, intent)
+  return VariableAttrs(is_parameter, is_allocatable, is_pointer, is_target, dimensions, intent)
 end
 
 function get_type_attributes(attributes::AbstractString)::DerivedTypeAttrs

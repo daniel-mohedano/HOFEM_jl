@@ -105,15 +105,15 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
 end
 
 function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
+  if member.type isa DerivedType || !isnothing(member.attributes.dimensions)
+    return ""
+  end
+
   interoperable_type = lang isa Fortran ? fortran_type : julia_type
 
   code = ""
   setter_name = t_setter_name(type_name, member.name, lang)
   getter_name = t_getter_name(type_name, member.name, lang)
-
-  if member.type isa DerivedType
-    return code
-  end
 
   if !(setter_name in custom_routines)
     code *= t_setter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
@@ -129,6 +129,10 @@ function build_member_access(type_name::AbstractString, member::Variable, custom
 end
 
 function build_module_var_access(module_var::ModuleVariable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
+  if !module_var.var.attributes.is_target
+    return ""
+  end
+
   code = ""
   getter_name = t_getter_module_var_name(module_var.var.name)
   if !(getter_name in custom_routines)
@@ -233,7 +237,7 @@ function indent_code(code::AbstractString, num_tabs::Int, new_line::Bool)::Strin
   empty_last = lines[end] == ""
 
   for i in eachindex(lines)
-    indent = repeat("    ", num_tabs)
+    indent = repeat("\t", num_tabs)
     lines[i] = indent * lines[i]
   end
 

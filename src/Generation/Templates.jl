@@ -51,12 +51,12 @@ end
 function t_module_structure_fortran(interface_name::AbstractString, mod_name::AbstractString, contents::AbstractString, custom_section::AbstractString)::String
   return """
   MODULE $interface_name
-      USE iso_c_binding
-      USE $mod_name
-
-      IMPLICIT NONE
-
-      CONTAINS
+  \tUSE iso_c_binding
+  \tUSE $mod_name
+  \t
+  \tIMPLICIT NONE
+  \t
+  \tCONTAINS
   $contents
 
   $custom_section
@@ -103,32 +103,32 @@ function t_setter(type_name::AbstractString, member_name::AbstractString, member
   if lowercase(member_type) == "char" || lowercase(member_type) == "character"
     return """
     SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
-        TYPE(C_PTR), VALUE :: data_c_ptr
-        CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
-        TYPE($type_name), POINTER :: data
-        INTEGER :: i = 1
-
-        CALL c_f_pointer(data_c_ptr, data)
-        DO
-            IF ((val(i) == C_NULL_CHAR) .OR. (i == LENGTH)) EXIT
-            data%$member_name(i:i) = val(i)
-            i = i + 1
-        END DO
-        DO WHILE (i <= LENGTH)
-            data%$member_name(i:i) = " "
-            i = i + 1
-        END DO
+    \tTYPE(C_PTR), VALUE :: data_c_ptr
+    \tCHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
+    \tTYPE($type_name), POINTER :: data
+    \tINTEGER :: i = 1
+    \t
+    \tCALL c_f_pointer(data_c_ptr, data)
+    \tDO
+    \t\tIF ((val(i) == C_NULL_CHAR) .OR. (i == LENGTH)) EXIT
+    \t\tdata%$member_name(i:i) = val(i)
+    \t\ti = i + 1
+    \tEND DO
+    \tDO WHILE (i <= LENGTH)
+    \t\tdata%$member_name(i:i) = " "
+    \t\ti = i + 1
+    \tEND DO
     END SUBROUTINE $(t_setter_name(type_name, member_name, lang))
     """
   else
     return """
     SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
-        TYPE(C_PTR), VALUE :: data_c_ptr
-        $member_type($member_inter_type), VALUE :: val
-        TYPE($type_name), POINTER :: data
-        
-        CALL c_f_pointer(data_c_ptr, data)
-        data%$member_name = val
+    \tTYPE(C_PTR), VALUE :: data_c_ptr
+    \t$member_type($member_inter_type), VALUE :: val
+    \tTYPE($type_name), POINTER :: data
+    \t
+    \tCALL c_f_pointer(data_c_ptr, data)
+    \tdata%$member_name = val
     END SUBROUTINE $(t_setter_name(type_name, member_name, lang))
     """
   end
@@ -138,13 +138,13 @@ function t_setter(type_name::AbstractString, member_name::AbstractString, member
   if lowercase(member_type) == "char" || lowercase(member_type) == "character"
     return """
     function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
-        @ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
+    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
     end
     """
   else
     return """
     function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)
-        @ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)::Cvoid
+    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)::Cvoid
     end
     """
   end
@@ -154,29 +154,29 @@ function t_getter(type_name::AbstractString, member_name::AbstractString, member
   if lowercase(member_type) == "char" || lowercase(member_type) == "character"
     return """
     SUBROUTINE $(t_getter_name(type_name, member_name, lang))(data_c_ptr, string) BIND(C)
-        TYPE(C_PTR), VALUE :: data_c_ptr
-        CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(INOUT) :: string
-        TYPE($type_name), POINTER :: data
-        INTEGER :: i = 1
-
-        CALL c_f_pointer(data_c_ptr, data)
-        DO
-            IF ((data%$member_name(i:i) == " ") .OR. (i == LENGTH)) EXIT
-            string(i) = data%$member_name(i:i)
-            i = i + 1
-        END DO
-        string(i) = C_NULL_CHAR
+    \tTYPE(C_PTR), VALUE :: data_c_ptr
+    \tCHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(INOUT) :: string
+    \tTYPE($type_name), POINTER :: data
+    \tINTEGER :: i = 1
+    \t
+    \tCALL c_f_pointer(data_c_ptr, data)
+    \tDO
+    \t\tIF ((data%$member_name(i:i) == " ") .OR. (i == LENGTH)) EXIT
+    \t\tstring(i) = data%$member_name(i:i)
+    \t\ti = i + 1
+    \tEND DO
+    \tstring(i) = C_NULL_CHAR
     END SUBROUTINE $(t_getter_name(type_name, member_name, lang))
     """
   else
     return """
     FUNCTION $(t_getter_name(type_name, member_name, lang))(data_c_ptr) BIND(C)
-        TYPE(C_PTR), VALUE :: data_c_ptr
-        $member_type($member_inter_type) :: $(t_getter_name(type_name, member_name, lang))
-        TYPE($type_name), POINTER :: data
-        
-        CALL c_f_pointer(data_c_ptr, data)
-        $(t_getter_name(type_name, member_name, lang)) = data%$member_name
+    \tTYPE(C_PTR), VALUE :: data_c_ptr
+    \t$member_type($member_inter_type) :: $(t_getter_name(type_name, member_name, lang))
+    \tTYPE($type_name), POINTER :: data
+    \t
+    \tCALL c_f_pointer(data_c_ptr, data)
+    \t$(t_getter_name(type_name, member_name, lang)) = data%$member_name
     END FUNCTION $(t_getter_name(type_name, member_name, lang))
     """
   end
@@ -186,13 +186,13 @@ function t_getter(type_name::AbstractString, member_name::AbstractString, member
   if lowercase(member_type) == "char" || lowercase(member_type) == "character"
     return """
     function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
-        @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
+    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
     end
     """
   else
     return """
     function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
-        return @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
+    \treturn @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
     end
     """
   end
@@ -201,10 +201,10 @@ end
 function t_getter_module_var(var_name::AbstractString, type_name::AbstractString, lang::Fortran)::String
   return """
   FUNCTION $(t_getter_module_var_name(var_name))() BIND(C)
-      TYPE(C_PTR) :: $(t_getter_module_var_name(var_name))
-      TYPE($type_name), POINTER :: ptr
-      ptr => $var_name
-      $(t_getter_module_var_name(var_name)) = c_loc(ptr)
+  \tTYPE(C_PTR) :: $(t_getter_module_var_name(var_name))
+  \tTYPE($type_name), POINTER :: ptr
+  \tptr => $var_name
+  \t$(t_getter_module_var_name(var_name)) = c_loc(ptr)
   END FUNCTION $(t_getter_module_var_name(var_name))
   """
 end
@@ -212,7 +212,7 @@ end
 function t_getter_module_var(var_name::AbstractString, type_name::AbstractString, lang::Julia)::String
   return """
   function $(t_getter_module_var_name(var_name))()::Ptr{Cvoid}
-      return @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_module_var_name(var_name)))()::Ptr{Cvoid}
+  \treturn @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_module_var_name(var_name)))()::Ptr{Cvoid}
   end
   """
 end
@@ -220,14 +220,14 @@ end
 function t_type_print(type_name::AbstractString, member_names::Vector{<:AbstractString}, lang::Fortran)::String
   print_statements = ""
   for member in member_names
-    print_statements *= "    PRINT *, \"$member:\", data%$member\n"
+    print_statements *= "\tPRINT *, \"$member:\", data%$member\n"
   end
   return """
   SUBROUTINE $(t_type_print_name(type_name))(data_c_ptr) BIND(C)
-      TYPE(C_PTR), VALUE :: data_c_ptr
-      TYPE($type_name), POINTER :: data
-      CALL c_f_pointer(data_c_ptr, data)
-      PRINT *, "$type_name"
+  \tTYPE(C_PTR), VALUE :: data_c_ptr
+  \tTYPE($type_name), POINTER :: data
+  \tCALL c_f_pointer(data_c_ptr, data)
+  \tPRINT *, "$type_name"
   $print_statements
   END SUBROUTINE $(t_type_print_name(type_name))
   """
@@ -236,7 +236,7 @@ end
 function t_type_print(type_name::AbstractString, member_names::Vector{<:AbstractString}, lang::Julia)::String
   return """
   function $(t_type_print_name(type_name))(data_c_ptr::Ptr{Cvoid})
-      @ccall _HOFEM_LIB_PATH.$(lowercase(t_type_print_name(type_name)))(data_c_ptr::Ptr{Cvoid})::Cvoid
+  \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_type_print_name(type_name)))(data_c_ptr::Ptr{Cvoid})::Cvoid
   end
   """
 end

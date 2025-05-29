@@ -9,10 +9,11 @@ struct VariableAttrs
   is_parameter::Bool
   is_allocatable::Bool
   is_pointer::Bool
+  is_target::Bool
   dimensions::Union{Vector{AbstractString},Nothing}
   intent::Union{AbstractString,Nothing}  # in, out, inout
 end
-VariableAttrs() = VariableAttrs(false, false, false, nothing, nothing)
+VariableAttrs() = VariableAttrs(false, false, false, false, nothing, nothing)
 
 function Base.show(io::IO, ::MIME"text/plain", attr::VariableAttrs)
   indent = get(io, :indent, 0)
@@ -20,6 +21,7 @@ function Base.show(io::IO, ::MIME"text/plain", attr::VariableAttrs)
   println(io, tab, "  is_parameter: ", attr.is_parameter)
   println(io, tab, "  is_allocatable: ", attr.is_allocatable)
   println(io, tab, "  is_pointer: ", attr.is_pointer)
+  println(io, tab, "  is_target: ", attr.is_target)
   println(io, tab, "  dimensions: ", isnothing(attr.dimensions) || isempty(attr.dimensions) ? "-" : attr.dimensions)
   println(io, tab, "  intent: ", attr.intent === nothing ? "-" : attr.intent)
 end
