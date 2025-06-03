@@ -4,7 +4,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 29 May 2025
+!> 3 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for mesh_object_module_jl_interface
@@ -86,6 +86,18 @@ end
 
 function print_MeshObject(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_meshobject(data_c_ptr::Ptr{Cvoid})::Cvoid
+end
+
+struct MeshObject
+	handle::Ptr{Cvoid}
+end
+
+function MeshObject()
+	return MeshObject(@ccall _HOFEM_LIB_PATH.new_meshobject()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::MeshObject)
+	@ccall _HOFEM_LIB_PATH.free_meshobject(obj.handle::Ptr{Cvoid})::Cvoid
 end
 
 function get_local_mesh()::Ptr{Cvoid}

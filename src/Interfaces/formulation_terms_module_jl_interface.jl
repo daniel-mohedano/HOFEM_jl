@@ -4,7 +4,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 29 May 2025
+!> 3 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for formulation_terms_module_jl_interface
@@ -64,8 +64,32 @@ function print_thermal_formulation(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_thermal_formulation(data_c_ptr::Ptr{Cvoid})::Cvoid
 end
 
+struct thermal_formulation
+	handle::Ptr{Cvoid}
+end
+
+function thermal_formulation()
+	return thermal_formulation(@ccall _HOFEM_LIB_PATH.new_thermal_formulation()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::thermal_formulation)
+	@ccall _HOFEM_LIB_PATH.free_thermal_formulation(obj.handle::Ptr{Cvoid})::Cvoid
+end
+
 function print_double_curl_wave_formulation(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_double_curl_wave_formulation(data_c_ptr::Ptr{Cvoid})::Cvoid
+end
+
+struct double_curl_wave_formulation
+	handle::Ptr{Cvoid}
+end
+
+function double_curl_wave_formulation()
+	return double_curl_wave_formulation(@ccall _HOFEM_LIB_PATH.new_double_curl_wave_formulation()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::double_curl_wave_formulation)
+	@ccall _HOFEM_LIB_PATH.free_double_curl_wave_formulation(obj.handle::Ptr{Cvoid})::Cvoid
 end
 
 function FormulationConstants_set_bilGradFiGradFi!(data_c_ptr::Ptr{Cvoid}, val::ComplexF64)
@@ -158,6 +182,18 @@ end
 
 function print_FormulationConstants(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_formulationconstants(data_c_ptr::Ptr{Cvoid})::Cvoid
+end
+
+struct FormulationConstants
+	handle::Ptr{Cvoid}
+end
+
+function FormulationConstants()
+	return FormulationConstants(@ccall _HOFEM_LIB_PATH.new_formulationconstants()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::FormulationConstants)
+	@ccall _HOFEM_LIB_PATH.free_formulationconstants(obj.handle::Ptr{Cvoid})::Cvoid
 end
 
 function FormulationTerms_set_bilGradFiGradFi!(data_c_ptr::Ptr{Cvoid}, val::Cuchar)
@@ -266,6 +302,18 @@ end
 
 function print_FormulationTerms(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_formulationterms(data_c_ptr::Ptr{Cvoid})::Cvoid
+end
+
+struct FormulationTerms
+	handle::Ptr{Cvoid}
+end
+
+function FormulationTerms()
+	return FormulationTerms(@ccall _HOFEM_LIB_PATH.new_formulationterms()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::FormulationTerms)
+	@ccall _HOFEM_LIB_PATH.free_formulationterms(obj.handle::Ptr{Cvoid})::Cvoid
 end
 
 function get_thermal_simulation()::Ptr{Cvoid}

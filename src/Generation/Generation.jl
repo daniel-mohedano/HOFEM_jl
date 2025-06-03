@@ -46,6 +46,8 @@ function build_fortran_interface(mod::AbstractModule, output_path::AbstractStrin
     end
     # Custom print function
     module_code *= build_type_print(derived_type, custom_routines, FORTRAN)
+    # Type factory
+    module_code *= build_type_factory(derived_type, FORTRAN)
   end
 
   # Module variables
@@ -88,6 +90,8 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
     end
     # Custom print function
     module_code *= build_type_print(derived_type, custom_routines, JULIA)
+    # Type factory
+    module_code *= build_type_factory(derived_type, JULIA)
   end
 
   # Module variables
@@ -152,6 +156,12 @@ function build_type_print(type::DerivedType, custom_routines::Vector{<:AbstractS
     code *= "\n"
   end
 
+  return code
+end
+
+function build_type_factory(type::DerivedType, lang::Lang)::AbstractString
+  code = t_factory(type.name, lang)
+  code *= "\n"
   return code
 end
 

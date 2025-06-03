@@ -91,6 +91,14 @@ function t_type_print_name(type_name::AbstractString)::String
   return "print_$(type_name)"
 end
 
+function t_new_name(type_name::AbstractString)::String
+  return "new_$(type_name)"
+end
+
+function t_free_name(type_name::AbstractString)::String
+  return "free_$(type_name)"
+end
+
 function t_setter_name(type_name::AbstractString, member_name::AbstractString, lang::Julia)::String
   return t_setter_name(type_name, member_name, FORTRAN) * "!"
 end
@@ -196,6 +204,42 @@ function t_getter(type_name::AbstractString, member_name::AbstractString, member
     end
     """
   end
+end
+
+function t_factory(type_name::AbstractString, lang::Fortran)::String
+  return """
+  FUNCTION $(t_new_name(type_name))() BIND(C)
+  \tTYPE(C_PTR) :: $(t_new_name(type_name))
+  \tTYPE($type_name), POINTER :: obj
+
+  \tALLOCATE(obj)
+  \t$(t_new_name(type_name)) = c_loc(obj)
+  END FUNCTION $(t_new_name(type_name))
+
+  SUBROUTINE $(t_free_name(type_name))(p) BIND(C)
+  \tTYPE(C_PTR), VALUE :: p
+  \tTYPE($type_name), POINTER :: obj
+
+  \tCALL c_f_pointer(p, obj)
+  \tIF (ASSOCIATED(obj)) DEALLOCATE(obj)
+  END SUBROUTINE $(t_free_name(type_name))
+  """
+end
+
+function t_factory(type_name::AbstractString, lang::Julia)::String
+  return """
+  struct $type_name
+  \thandle::Ptr{Cvoid}
+  end
+
+  function $type_name()
+  \treturn $type_name(@ccall _HOFEM_LIB_PATH.$(lowercase(t_new_name(type_name)))()::Ptr{Cvoid})
+  end
+
+  function Base.finalize(obj::$type_name)
+  \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_free_name(type_name)))(obj.handle::Ptr{Cvoid})::Cvoid
+  end
+  """
 end
 
 function t_getter_module_var(var_name::AbstractString, type_name::AbstractString, lang::Fortran)::String

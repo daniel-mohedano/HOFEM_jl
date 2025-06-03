@@ -4,7 +4,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 29 May 2025
+!> 3 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for program_variables_module_jl_interface
@@ -160,6 +160,18 @@ function print_programCommonData(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_programcommondata(data_c_ptr::Ptr{Cvoid})::Cvoid
 end
 
+struct programCommonData
+	handle::Ptr{Cvoid}
+end
+
+function programCommonData()
+	return programCommonData(@ccall _HOFEM_LIB_PATH.new_programcommondata()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::programCommonData)
+	@ccall _HOFEM_LIB_PATH.free_programcommondata(obj.handle::Ptr{Cvoid})::Cvoid
+end
+
 function gid_surface_sets_set_set_ID!(data_c_ptr::Ptr{Cvoid}, val::Cint)
 	@ccall _HOFEM_LIB_PATH.gid_surface_sets_set_set_id(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
 end
@@ -170,6 +182,18 @@ end
 
 function print_gid_surface_sets(data_c_ptr::Ptr{Cvoid})
 	@ccall _HOFEM_LIB_PATH.print_gid_surface_sets(data_c_ptr::Ptr{Cvoid})::Cvoid
+end
+
+struct gid_surface_sets
+	handle::Ptr{Cvoid}
+end
+
+function gid_surface_sets()
+	return gid_surface_sets(@ccall _HOFEM_LIB_PATH.new_gid_surface_sets()::Ptr{Cvoid})
+end
+
+function Base.finalize(obj::gid_surface_sets)
+	@ccall _HOFEM_LIB_PATH.free_gid_surface_sets(obj.handle::Ptr{Cvoid})::Cvoid
 end
 
 function get_commonProperties()::Ptr{Cvoid}

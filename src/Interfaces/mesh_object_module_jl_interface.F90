@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 29 May 2025
+!> 3 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for mesh_object_module_jl_interface
@@ -202,6 +202,22 @@ MODULE mesh_object_module_jl_interface
 			PRINT *, "upper_dof_id:", data%upper_dof_id
 		
 		END SUBROUTINE print_MeshObject
+		
+		FUNCTION new_MeshObject() BIND(C)
+			TYPE(C_PTR) :: new_MeshObject
+			TYPE(MeshObject), POINTER :: obj
+		
+			ALLOCATE(obj)
+			new_MeshObject = c_loc(obj)
+		END FUNCTION new_MeshObject
+		
+		SUBROUTINE free_MeshObject(p) BIND(C)
+			TYPE(C_PTR), VALUE :: p
+			TYPE(MeshObject), POINTER :: obj
+		
+			CALL c_f_pointer(p, obj)
+			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
+		END SUBROUTINE free_MeshObject
 		
 		FUNCTION get_local_mesh() BIND(C)
 			TYPE(C_PTR) :: get_local_mesh
