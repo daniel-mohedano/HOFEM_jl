@@ -11,6 +11,8 @@ MODULE example_mod
   TYPE, EXTENDS(derived_type) :: extended_type
     REAL(KIND=8), ALLOCATABLE :: data(:)
     TYPE(derived_type) :: z
+  CONTAINS
+    PROCEDURE :: print => print_ExtendedType
   END TYPE extended_type
 
 
@@ -66,5 +68,9 @@ MODULE example_mod
   CHARACTER(LEN=5) FUNCTION char_func()
 
   END FUNCTION char_func
+
+  SUBROUTINE print_ExtendedType(this)
+    class(extended_type), INTENT(IN) :: this
+  END SUBROUTINE print_ExtendedType
   
 END MODULE example_mod

@@ -28,8 +28,19 @@ function Base.match(match_type::MatchType, line::AbstractString)::Union{RegexMat
   return match(_REGEXES[match_type], line)
 end
 
-function get_type(type::AbstractString)::AbstractType
+function get_type(type::AbstractString)::Union{AbstractType,Nothing}
+  if (lowercase(strip(type)) == "procedure")
+    # discard procedures that are matched for "VARIABLE" mach
+    return nothing
+  end
+
   m = match(r"TYPE\((?<type>\w+)\)"i, type)
+  if !isnothing(m)
+    return DerivedType(m["type"])
+  end
+
+  # Class routines
+  m = match(r"CLASS\((?<type>\w+)\)"i, type)
   if !isnothing(m)
     return DerivedType(m["type"])
   end

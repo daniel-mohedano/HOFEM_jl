@@ -190,6 +190,10 @@ function _parse_variables(original_match::RegexMatch)::Vector{Variable}
   variables = Variable[]
 
   shared_type = get_type(original_match["type"])
+  if isnothing(shared_type)
+    return variables
+  end
+
   shared_attrs = get_var_attributes(original_match["attrs"])
 
   for var in split(original_match["names"], r"\s*,\s*(?![^()]*\))")

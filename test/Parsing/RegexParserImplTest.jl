@@ -49,7 +49,7 @@ using Test
   @test global_var.visibility == HOFEM_jl.Parsing.Public
 
   # Test procedures
-  @test length(mod.procedures) == 6
+  @test length(mod.procedures) == 7
 
   # Test distance function
   distance = mod.procedures[1]
@@ -131,5 +131,13 @@ using Test
   @test char_func.ret.type isa HOFEM_jl.Parsing.IntrinsicType
   @test char_func.ret.type.name == "CHARACTER"
   @test char_func.ret.type.len == "5"
+
+  # Test class procedure
+  print_func = mod.procedures[7]
+  @test print_func.name == "print_ExtendedType"
+  @test length(print_func.args) == 1
+  @test print_func.args[1].type isa HOFEM_jl.Parsing.DerivedType
+  @test print_func.args[1].type.name == "extended_type"
+  @test isnothing(print_func.ret)
 
 end
