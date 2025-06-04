@@ -16,7 +16,7 @@ const _REGEXES = Dict(
   MODULE_END => r"^\s*END\s+MODULE\s+(?<name>\w+)\s*"i,
   TYPE_START => r"^\s*TYPE(?<attrs>(\s*,\s*(EXTENDS\(\s*\w+\s*\)|ABSTRACT|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
   TYPE_END => r"^\s*END\s+TYPE\s+(?<name>\w+)\s*"i,
-  VARIABLE => r"^\s*(?<type>\w+(?:\([^)]*\))?)(?<attrs>(?:\s*,\s*(?:INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\)|PARAMETER|ALLOCATABLE|POINTER|TARGET))*)?\s*::\s*(?<names>(?:\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)(?:\s*,\s*\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)*)"i,
+  VARIABLE => r"^\s*(?<type>\w+(?:\([^)]*\))?)(?<attrs>(?:\s*,\s*(?:INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\)|PARAMETER|ALLOCATABLE|POINTER|TARGET|VALUE))*)?\s*::\s*(?<names>(?:\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)(?:\s*,\s*\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)*)"i,
   GLOBAL_VAR => r"^\s*TYPE\((?<type>\w+)\)(?<attrs>(\s*,\s*(TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
   SUBROUTINE_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*BIND(C))?\s*"i,
   SUBROUTINE_END => r"^\s*END\s+SUBROUTINE(\s+(?<name>\w+))?\s*"i,
@@ -77,7 +77,9 @@ function get_var_attributes(attrs::AbstractString)::VariableAttrs
     intent = lowercase(intent_match["intent"])
   end
 
-  return VariableAttrs(is_parameter, is_allocatable, is_pointer, is_target, dimensions, intent)
+  is_value = occursin(r"\s*,\s*VALUE"i, attrs)
+
+  return VariableAttrs(is_parameter, is_allocatable, is_pointer, is_target, is_value, dimensions, intent)
 end
 
 function get_type_attributes(attributes::AbstractString)::DerivedTypeAttrs

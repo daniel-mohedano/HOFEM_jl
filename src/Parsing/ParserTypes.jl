@@ -10,10 +10,11 @@ struct VariableAttrs
   is_allocatable::Bool
   is_pointer::Bool
   is_target::Bool
+  is_value::Bool
   dimensions::Union{Vector{AbstractString},Nothing}
   intent::Union{AbstractString,Nothing}  # in, out, inout
 end
-VariableAttrs() = VariableAttrs(false, false, false, false, nothing, nothing)
+VariableAttrs() = VariableAttrs(false, false, false, false, false, nothing, nothing)
 
 function Base.show(io::IO, ::MIME"text/plain", attr::VariableAttrs)
   indent = get(io, :indent, 0)
@@ -22,6 +23,7 @@ function Base.show(io::IO, ::MIME"text/plain", attr::VariableAttrs)
   println(io, tab, "  is_allocatable: ", attr.is_allocatable)
   println(io, tab, "  is_pointer: ", attr.is_pointer)
   println(io, tab, "  is_target: ", attr.is_target)
+  println(io, tab, "  is_value: ", attr.is_value)
   println(io, tab, "  dimensions: ", isnothing(attr.dimensions) || isempty(attr.dimensions) ? "-" : attr.dimensions)
   println(io, tab, "  intent: ", attr.intent === nothing ? "-" : attr.intent)
 end
@@ -33,7 +35,7 @@ struct IntrinsicType <: AbstractType
 end
 IntrinsicType(name::AbstractString) = IntrinsicType(name, nothing, nothing)
 
-function fortran_type(type::IntrinsicType)
+function fortran_type(type::IntrinsicType)::String
   if lowercase(type.name) == "integer"
     return "C_INT"
   elseif lowercase(type.name) == "real"
@@ -55,7 +57,7 @@ function fortran_type(type::IntrinsicType)
   end
 end
 
-function julia_type(type::IntrinsicType)
+function julia_type(type::IntrinsicType)::String
   if lowercase(type.name) == "integer"
     return "Cint"
   elseif lowercase(type.name) == "real"
