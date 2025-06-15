@@ -209,6 +209,7 @@ function _parse_variables(original_match::RegexMatch)::Vector{Variable}
           shared_attrs.is_allocatable,
           shared_attrs.is_pointer,
           shared_attrs.is_target,
+          shared_attrs.is_value,
           dims,
           shared_attrs.intent)
         push!(variables, Variable(name, shared_type, new_attrs))

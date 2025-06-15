@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 3 June 2025
+!> 15 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for formulation_terms_module_jl_interface
@@ -155,7 +155,6 @@ MODULE formulation_terms_module_jl_interface
 			PRINT *, "previous_max_error:", data%previous_max_error
 			PRINT *, "step_tolerance:", data%step_tolerance
 			PRINT *, "time_step_strategy:", data%time_step_strategy
-		
 		END SUBROUTINE print_thermal_formulation
 		
 		FUNCTION new_thermal_formulation() BIND(C)
@@ -412,7 +411,6 @@ MODULE formulation_terms_module_jl_interface
 			PRINT *, "bilBoundNiNi:", data%bilBoundNiNi
 			PRINT *, "linNiFunction:", data%linNiFunction
 			PRINT *, "bilNiGradFi:", data%bilNiGradFi
-		
 		END SUBROUTINE print_FormulationConstants
 		
 		FUNCTION new_FormulationConstants() BIND(C)
@@ -728,7 +726,6 @@ MODULE formulation_terms_module_jl_interface
 			PRINT *, "variational_unknown:", data%variational_unknown
 			PRINT *, "basis_functions:", data%basis_functions
 			PRINT *, "physics:", data%physics
-		
 		END SUBROUTINE print_FormulationTerms
 		
 		FUNCTION new_FormulationTerms() BIND(C)

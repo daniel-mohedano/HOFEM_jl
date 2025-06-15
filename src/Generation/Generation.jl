@@ -1,10 +1,13 @@
 module Generation
-include("Templates.jl")
 
 using Dates
-import ..Parsing: AbstractModule, DerivedType, ModuleVariable, Variable, fortran_type, julia_type, MatchType, SUBROUTINE_START, FUNCTION_START
+import ..Parsing: AbstractModule, DerivedType, IntrinsicType, ModuleVariable, Variable, Procedure, fortran_type, julia_type, is_interoperable, isstring, MatchType, SUBROUTINE_START, FUNCTION_START
 
 export generate_interfaces
+
+include("Templates.jl")
+
+# todo: clean function returns
 
 """
     generate_interfaces(modules::Vector{Module}, output_path::AbstractString)
@@ -47,13 +50,18 @@ function build_fortran_interface(mod::AbstractModule, output_path::AbstractStrin
     # Custom print function
     module_code *= build_type_print(derived_type, custom_routines, FORTRAN)
     # Type factory
-    module_code *= build_type_factory(derived_type, FORTRAN)
+    module_code *= t_factory(derived_type.name, FORTRAN) * "\n"
   end
 
   # Module variables
   for module_var in mod.variables
     module_code *= build_module_var_access(module_var, custom_routines, FORTRAN)
   end
+  #
+  # Routines
+  #for proc in mod.procedures
+  #  module_code *= t_call_routine(proc, FORTRAN)
+  #end
 
   module_code = indent_code(module_code, 2, false)
 
@@ -91,13 +99,18 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
     # Custom print function
     module_code *= build_type_print(derived_type, custom_routines, JULIA)
     # Type factory
-    module_code *= build_type_factory(derived_type, JULIA)
+    module_code *= t_factory(derived_type.name, JULIA) * "\n"
   end
 
   # Module variables
   for module_var in mod.variables
     module_code *= build_module_var_access(module_var, custom_routines, JULIA)
   end
+
+  # Routines
+  #for proc in mod.procedures
+  #  module_code *= t_call_routine(proc, JULIA)
+  #end
 
   module_code = indent_code(module_code, 0, false)
   interface_file_contents *= t_module_structure_julia(module_code, custom_section)
@@ -109,7 +122,8 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
 end
 
 function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
-  if member.type isa DerivedType || !isnothing(member.attributes.dimensions)
+  # todo: remove this check and improve interface generation
+  if member.type isa DerivedType || !isnothing(member.attributes.dimensions) || !is_interoperable(member)
     return ""
   end
 
@@ -120,12 +134,12 @@ function build_member_access(type_name::AbstractString, member::Variable, custom
   getter_name = t_getter_name(type_name, member.name, lang)
 
   if !(setter_name in custom_routines)
-    code *= t_setter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
+    code *= t_setter(type_name, member.name, member.type, interoperable_type(member.type), lang)
     code *= "\n"
   end
 
   if !(getter_name in custom_routines)
-    code *= t_getter(type_name, member.name, member.type.name, interoperable_type(member.type), lang)
+    code *= t_getter(type_name, member.name, member.type, interoperable_type(member.type), lang)
     code *= "\n"
   end
 
@@ -159,10 +173,18 @@ function build_type_print(type::DerivedType, custom_routines::Vector{<:AbstractS
   return code
 end
 
-function build_type_factory(type::DerivedType, lang::Lang)::AbstractString
-  code = t_factory(type.name, lang)
-  code *= "\n"
-  return code
+function needs_wrapper(p::Procedure)::Bool
+  if !isnothing(p.ret) && !is_interoperable(p.ret)
+    return true
+  end
+
+  for arg in p.args
+    if !is_interoperable(arg)
+      return true
+    end
+  end
+
+  return false
 end
 
 """

@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 3 June 2025
+!> 15 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for mesh_object_module_jl_interface
@@ -200,7 +200,6 @@ MODULE mesh_object_module_jl_interface
 			PRINT *, "mesh_partition:", data%mesh_partition
 			PRINT *, "lower_dof_id:", data%lower_dof_id
 			PRINT *, "upper_dof_id:", data%upper_dof_id
-		
 		END SUBROUTINE print_MeshObject
 		
 		FUNCTION new_MeshObject() BIND(C)

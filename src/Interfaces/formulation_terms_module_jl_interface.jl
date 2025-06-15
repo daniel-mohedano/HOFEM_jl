@@ -4,7 +4,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 3 June 2025
+!> 15 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for formulation_terms_module_jl_interface
@@ -12,44 +12,44 @@
 """
 _HOFEM_LIB_PATH = get(ENV, "HOFEM_LIB_PATH", "")
 
-function thermal_formulation_set_delta_sim_time!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_delta_sim_time(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function thermal_formulation_set_delta_sim_time!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_delta_sim_time(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function thermal_formulation_get_delta_sim_time(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_delta_sim_time(data_c_ptr::Ptr{Cvoid})::Cdouble
+function thermal_formulation_get_delta_sim_time(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_delta_sim_time(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function thermal_formulation_set_stop_sim_time!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_stop_sim_time(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function thermal_formulation_set_stop_sim_time!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_stop_sim_time(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function thermal_formulation_get_stop_sim_time(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_stop_sim_time(data_c_ptr::Ptr{Cvoid})::Cdouble
+function thermal_formulation_get_stop_sim_time(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_stop_sim_time(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function thermal_formulation_set_current_sim_time!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_current_sim_time(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function thermal_formulation_set_current_sim_time!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_current_sim_time(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function thermal_formulation_get_current_sim_time(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_current_sim_time(data_c_ptr::Ptr{Cvoid})::Cdouble
+function thermal_formulation_get_current_sim_time(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_current_sim_time(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function thermal_formulation_set_total_time_steps!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_total_time_steps(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function thermal_formulation_set_total_time_steps!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_total_time_steps(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function thermal_formulation_get_total_time_steps(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_total_time_steps(data_c_ptr::Ptr{Cvoid})::Cint
+function thermal_formulation_get_total_time_steps(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_total_time_steps(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
-function thermal_formulation_set_step_tolerance!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_step_tolerance(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function thermal_formulation_set_step_tolerance!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.thermal_formulation_set_step_tolerance(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function thermal_formulation_get_step_tolerance(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_step_tolerance(data_c_ptr::Ptr{Cvoid})::Cdouble
+function thermal_formulation_get_step_tolerance(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.thermal_formulation_get_step_tolerance(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
 function thermal_formulation_set_time_step_strategy!(data_c_ptr::Ptr{Cvoid}, val::String)

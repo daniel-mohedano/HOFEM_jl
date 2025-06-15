@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 3 June 2025
+!> 15 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for program_variables_module_jl_interface
@@ -473,7 +473,6 @@ MODULE program_variables_module_jl_interface
 			PRINT *, "slevel_solver_percentage:", data%slevel_solver_percentage
 			PRINT *, "flevel_memory_MB:", data%flevel_memory_MB
 			PRINT *, "slevel_memory_MB:", data%slevel_memory_MB
-		
 		END SUBROUTINE print_programCommonData
 		
 		FUNCTION new_programCommonData() BIND(C)
@@ -517,7 +516,6 @@ MODULE program_variables_module_jl_interface
 			PRINT *, "gid_surface_sets"
 			PRINT *, "set_ID:", data%set_ID
 			PRINT *, "set_info:", data%set_info
-		
 		END SUBROUTINE print_gid_surface_sets
 		
 		FUNCTION new_gid_surface_sets() BIND(C)

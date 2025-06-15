@@ -4,7 +4,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 3 June 2025
+!> 15 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for program_variables_module_jl_interface
@@ -60,44 +60,44 @@ function programCommonData_get_mesh_filename(data_c_ptr::Ptr{Cvoid}, val::String
 	@ccall _HOFEM_LIB_PATH.programcommondata_get_mesh_filename(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
 end
 
-function programCommonData_set_numRHS!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_numrhs(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function programCommonData_set_numRHS!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_numrhs(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function programCommonData_get_numRHS(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_numrhs(data_c_ptr::Ptr{Cvoid})::Cint
+function programCommonData_get_numRHS(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_numrhs(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
-function programCommonData_set_working_frequency_index!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_working_frequency_index(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function programCommonData_set_working_frequency_index!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_working_frequency_index(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function programCommonData_get_working_frequency_index(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_working_frequency_index(data_c_ptr::Ptr{Cvoid})::Cdouble
+function programCommonData_get_working_frequency_index(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_working_frequency_index(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function programCommonData_set_delta_time!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_delta_time(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function programCommonData_set_delta_time!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_delta_time(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function programCommonData_get_delta_time(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_delta_time(data_c_ptr::Ptr{Cvoid})::Cdouble
+function programCommonData_get_delta_time(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_delta_time(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function programCommonData_set_simulation_stop_time!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_simulation_stop_time(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function programCommonData_set_simulation_stop_time!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_simulation_stop_time(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function programCommonData_get_simulation_stop_time(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_simulation_stop_time(data_c_ptr::Ptr{Cvoid})::Cdouble
+function programCommonData_get_simulation_stop_time(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_simulation_stop_time(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function programCommonData_set_outofcore_megas!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_outofcore_megas(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function programCommonData_set_outofcore_megas!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_outofcore_megas(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function programCommonData_get_outofcore_megas(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_outofcore_megas(data_c_ptr::Ptr{Cvoid})::Cdouble
+function programCommonData_get_outofcore_megas(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_outofcore_megas(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
 function programCommonData_set_solver_type!(data_c_ptr::Ptr{Cvoid}, val::String)
@@ -108,52 +108,52 @@ function programCommonData_get_solver_type(data_c_ptr::Ptr{Cvoid}, val::String)
 	@ccall _HOFEM_LIB_PATH.programcommondata_get_solver_type(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
 end
 
-function programCommonData_set_num_threads!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_num_threads(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function programCommonData_set_num_threads!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_num_threads(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function programCommonData_get_num_threads(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_num_threads(data_c_ptr::Ptr{Cvoid})::Cint
+function programCommonData_get_num_threads(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_num_threads(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
-function programCommonData_set_solver_percentage!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_solver_percentage(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function programCommonData_set_solver_percentage!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_solver_percentage(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function programCommonData_get_solver_percentage(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_solver_percentage(data_c_ptr::Ptr{Cvoid})::Cint
+function programCommonData_get_solver_percentage(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_solver_percentage(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
-function programCommonData_set_flevel_solver_percentage!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_flevel_solver_percentage(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function programCommonData_set_flevel_solver_percentage!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_flevel_solver_percentage(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function programCommonData_get_flevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_flevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Cint
+function programCommonData_get_flevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_flevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
-function programCommonData_set_slevel_solver_percentage!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_slevel_solver_percentage(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function programCommonData_set_slevel_solver_percentage!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_slevel_solver_percentage(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function programCommonData_get_slevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_slevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Cint
+function programCommonData_get_slevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_slevel_solver_percentage(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
-function programCommonData_set_flevel_memory_MB!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_flevel_memory_mb(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function programCommonData_set_flevel_memory_MB!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_flevel_memory_mb(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function programCommonData_get_flevel_memory_MB(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_flevel_memory_mb(data_c_ptr::Ptr{Cvoid})::Cdouble
+function programCommonData_get_flevel_memory_MB(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_flevel_memory_mb(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
-function programCommonData_set_slevel_memory_MB!(data_c_ptr::Ptr{Cvoid}, val::Cdouble)
-	@ccall _HOFEM_LIB_PATH.programcommondata_set_slevel_memory_mb(data_c_ptr::Ptr{Cvoid}, val::Cdouble)::Cvoid
+function programCommonData_set_slevel_memory_MB!(data_c_ptr::Ptr{Cvoid}, val::Float64)
+	@ccall _HOFEM_LIB_PATH.programcommondata_set_slevel_memory_mb(data_c_ptr::Ptr{Cvoid}, val::Float64)::Cvoid
 end
 
-function programCommonData_get_slevel_memory_MB(data_c_ptr::Ptr{Cvoid})::Cdouble
-	return @ccall _HOFEM_LIB_PATH.programcommondata_get_slevel_memory_mb(data_c_ptr::Ptr{Cvoid})::Cdouble
+function programCommonData_get_slevel_memory_MB(data_c_ptr::Ptr{Cvoid})::Float64
+	return @ccall _HOFEM_LIB_PATH.programcommondata_get_slevel_memory_mb(data_c_ptr::Ptr{Cvoid})::Float64
 end
 
 function print_programCommonData(data_c_ptr::Ptr{Cvoid})
@@ -172,12 +172,12 @@ function Base.finalize(obj::programCommonData)
 	@ccall _HOFEM_LIB_PATH.free_programcommondata(obj.handle::Ptr{Cvoid})::Cvoid
 end
 
-function gid_surface_sets_set_set_ID!(data_c_ptr::Ptr{Cvoid}, val::Cint)
-	@ccall _HOFEM_LIB_PATH.gid_surface_sets_set_set_id(data_c_ptr::Ptr{Cvoid}, val::Cint)::Cvoid
+function gid_surface_sets_set_set_ID!(data_c_ptr::Ptr{Cvoid}, val::Int32)
+	@ccall _HOFEM_LIB_PATH.gid_surface_sets_set_set_id(data_c_ptr::Ptr{Cvoid}, val::Int32)::Cvoid
 end
 
-function gid_surface_sets_get_set_ID(data_c_ptr::Ptr{Cvoid})::Cint
-	return @ccall _HOFEM_LIB_PATH.gid_surface_sets_get_set_id(data_c_ptr::Ptr{Cvoid})::Cint
+function gid_surface_sets_get_set_ID(data_c_ptr::Ptr{Cvoid})::Int32
+	return @ccall _HOFEM_LIB_PATH.gid_surface_sets_get_set_id(data_c_ptr::Ptr{Cvoid})::Int32
 end
 
 function print_gid_surface_sets(data_c_ptr::Ptr{Cvoid})

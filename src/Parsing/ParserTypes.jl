@@ -35,48 +35,68 @@ struct IntrinsicType <: AbstractType
 end
 IntrinsicType(name::AbstractString) = IntrinsicType(name, nothing, nothing)
 
-function fortran_type(type::IntrinsicType)::String
-  if lowercase(type.name) == "integer"
-    return "C_INT"
-  elseif lowercase(type.name) == "real"
-    if isnothing(type.kind) || type.kind == "DBL"
-      return "C_DOUBLE"
-    else
-      return "C_FLOAT"
-    end
-  elseif lowercase(type.name) == "logical"
-    return "C_BOOL"
-  elseif lowercase(type.name) == "complex"
-    if isnothing(type.kind) || type.kind == "DBL"
-      return "C_DOUBLE_COMPLEX"
-    else
-      return "C_FLOAT_COMPLEX"
-    end
+# Map for Int and Real types depending on kind
+const F_INT = Dict("1" => "C_INT8_T", "2" => "C_INT16_T", "4" => "C_INT32_T", "8" => "C_INT64_T")
+const F_REAL = Dict("4" => "C_FLOAT", "8" => "C_DOUBLE", "DBL" => "C_DOUBLE")
+const F_COMPLEX = Dict("4" => "C_FLOAT_COMPLEX", "8" => "C_DOUBLE_COMPLEX", "DBL" => "C_DOUBLE_COMPLEX")
+
+function _intrinsic_map(t::IntrinsicType)::Tuple{Bool,Union{String,Nothing}}
+  lname = lowercase(t.name)
+  kind = isnothing(t.kind) ? "" : t.kind
+  if lname == "integer"
+    iso = get(F_INT, kind, "C_INT")
+    return true, "INTEGER($(iso))"
+  elseif lname == "real"
+    iso = get(F_REAL, kind, "C_DOUBLE")
+    return true, "REAL($(iso))"
+  elseif lname == "complex"
+    iso = get(F_COMPLEX, kind, "C_DOUBLE_COMPLEX")
+    return true, "COMPLEX($(iso))"
+  elseif lname == "logical"
+    return true, "LOGICAL(C_BOOL)"
+  elseif lname == "character"
+    return true, "CHARACTER(KIND=C_CHAR), DIMENSION(*)"
   else
-    return ""
+    return false, nothing
   end
 end
 
-function julia_type(type::IntrinsicType)::String
-  if lowercase(type.name) == "integer"
-    return "Cint"
-  elseif lowercase(type.name) == "real"
-    if isnothing(type.kind) || type.kind == "DBL"
-      return "Cdouble"
-    else
-      return "Cfloat"
-    end
-  elseif lowercase(type.name) == "logical"
+function fortran_type(t::IntrinsicType)::String
+  m = _intrinsic_map(t)[2]
+  return isnothing(m) ? "" : m
+end
+
+const JL_INT = Dict("1" => Int8, "2" => Int16, "4" => Int32, "8" => Int64)
+const JL_REAL = Dict("4" => Float32, "8" => Float64)
+const JL_COMPLEX = Dict("4" => ComplexF32, "8" => ComplexF64)
+
+function julia_type(t::IntrinsicType)::String
+  lname = lowercase(t.name)
+  kind = isnothing(t.kind) ? "" : t.kind
+  if lname == "integer"
+    return string(get(JL_INT, kind, Int32))
+  elseif lname == "real"
+    return string(get(JL_REAL, kind, Float64))
+  elseif lname == "complex"
+    return string(get(JL_COMPLEX, kind, ComplexF64))
+  elseif lname == "logical"
     return "Cuchar"
-  elseif lowercase(type.name) == "complex"
-    if isnothing(type.kind) || type.kind == "DBL"
-      return "ComplexF64"
-    else
-      return "ComplexF32"
-    end
+  elseif lname == "character"
+    return "Ptr{Cchar}"
   else
-    return ""
+    return "Ptr{Cvoid}"
   end
+end
+
+function is_interoperable(t::IntrinsicType)::Bool
+  # todo: modify this, depending on the kind
+  #return isnothing(t.kind) || occursin("c_", lowercase(t.kind))
+  return _intrinsic_map(t)[1]
+end
+
+function isstring(type::IntrinsicType)::Bool
+  # todo: implemente as overload of isa
+  return (lowercase(type.name) == "char" || lowercase(type.name) == "character") && !isnothing(type.len)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", type::IntrinsicType)
@@ -94,6 +114,30 @@ struct Variable{T<:AbstractType}
   attributes::VariableAttrs
 end
 Variable(name::AbstractString, type::T) where {T<:AbstractType} = Variable{T}(name, type, VariableAttrs())
+
+function is_interoperable(v::Variable)::Bool
+  at = v.attributes
+
+  # pointers, allocatable and targets need descriptors
+  if at.is_pointer || at.is_allocatable || at.is_target
+    return false
+  end
+
+  # assumed-shape are non-interoperable
+  if !isnothing(at.dimensions) && any(d -> d == ":", at.dimensions)
+    return false
+  end
+
+  return is_interoperable(v.type)
+end
+
+function julia_type(v::Variable)::String
+  if !is_interoperable(v)
+    return "Ptr{Cvoid}"
+  end
+
+  return julia_type(v.type)
+end
 
 function Base.show(io::IO, ::MIME"text/plain", var::Variable)
   indent = get(io, :indent, 0)
@@ -127,6 +171,14 @@ struct DerivedType <: AbstractType
 end
 DerivedType(name::AbstractString, members::Vector{Variable}) = DerivedType(name, members, DerivedTypeAttrs())
 DerivedType(name::AbstractString) = DerivedType(name, Variable[], DerivedTypeAttrs())
+
+function is_interoperable(t::DerivedType)::Bool
+  return false
+end
+
+function julia_type(t::DerivedType)::String
+  return "Ptr{Cvoid}"
+end
 
 function Base.show(io::IO, ::MIME"text/plain", type::DerivedType)
   indent = get(io, :indent, 0)
