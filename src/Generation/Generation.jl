@@ -59,9 +59,9 @@ function build_fortran_interface(mod::AbstractModule, output_path::AbstractStrin
   end
   #
   # Routines
-  #for proc in mod.procedures
-  #  module_code *= t_call_routine(proc, FORTRAN)
-  #end
+  for proc in mod.procedures
+    module_code *= t_call_routine(proc, FORTRAN) * "\n"
+  end
 
   module_code = indent_code(module_code, 2, false)
 
@@ -108,9 +108,9 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
   end
 
   # Routines
-  #for proc in mod.procedures
-  #  module_code *= t_call_routine(proc, JULIA)
-  #end
+  for proc in mod.procedures
+    module_code *= t_call_routine(proc, JULIA) * "\n"
+  end
 
   module_code = indent_code(module_code, 0, false)
   interface_file_contents *= t_module_structure_julia(module_code, custom_section)

@@ -301,26 +301,26 @@ wrapper_symbol(proc::AbstractString) = "call_" * lowercase(proc)
 # - declaration lines
 # - name to be passed to original routine, or nothing
 # - the conversion statements (if needed)
-function _wrapper_stub(v::Variable, is_return::Bool=false)::Tuple{String,Vector{<:AbstractString}}
+function _wrapper_stub(v::Variable, is_return::Bool=false)::Tuple{String,AbstractString,AbstractString}
   # todo: check intent logic for return types
+  f_type = fortran_type(v.type)
   if is_interoperable(v)
-    f_type = fortran_type(v)
     intent = is_return ? "INTENT(OUT)" : "INTENT(IN)"
-    if v.attr.intent === "value"
+    if v.attributes.intent === "value"
       decl = "\t$f_type, VALUE :: $(v.name)"
     else
-      if v.attr.dimensions === nothing
+      if v.attributes.dimensions === nothing
         decl = "\t$f_type, $intent :: $(v.name)"
       else
         decl = "\t$f_type, DIMENSION(*) :: $(v.name)"
       end
     end
 
-    return decl, v.name, String[]
+    return decl, v.name, ""
   else
     # todo: the original fortan type
     temp_name = "f_" * v.name
-    decl = "\tTYPE(C_PTR), VALUE :: $(v.name)\n :: $temp_name"
+    decl = "\tTYPE(C_PTR), VALUE :: $(v.name)\n $(v.type.name)($f_type) :: $temp_name"
 
     return decl, temp_name, "\tCALL c_f_pointer($(v.name), $temp_name)"
   end
@@ -329,7 +329,7 @@ end
 function t_call_routine(proc::Procedure, lang::Fortran)::String
   # todo: check if it is actually needed to generate or not
   name = wrapper_symbol(proc.name)
-  arg_list = [v.name for v in proc.args]
+  arg_list = join([v.name for v in proc.args], ", ")
   stubs = [_wrapper_stub(v) for v in proc.args]
   decls = join([s[1] for s in stubs], "\n")
   call_args = join([s[2] for s in stubs], ", ")
@@ -339,9 +339,7 @@ function t_call_routine(proc::Procedure, lang::Fortran)::String
     return """
     SUBROUTINE $name($arg_list) BIND(C)
     $decls
-
     $conversions
-
     CALL $(proc.name)($call_args)
     END SUBROUTINE $name
     """
@@ -352,9 +350,7 @@ function t_call_routine(proc::Procedure, lang::Fortran)::String
     return """
     FUNCTION $name($arg_list) BIND(C)
     $decls
-
     $conversions
-
     $(ret_stub[2]) = $(proc.name)($call_args)
     END FUNCTION $name
     """
