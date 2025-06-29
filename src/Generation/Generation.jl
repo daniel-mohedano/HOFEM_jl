@@ -1,16 +1,14 @@
 module Generation
 
 using Dates
-import ..Parsing: AbstractModule, DerivedType, IntrinsicType, ModuleVariable, Variable, Procedure, fortran_type, julia_type, is_interoperable, isstring, MatchType, SUBROUTINE_START, FUNCTION_START
+import ..Parsing: AbstractModule, DerivedType, IntrinsicType, ModuleVariable, Variable, Procedure, fortran_type, julia_type, isstring, needs_wrapper, MatchType, SUBROUTINE_START, FUNCTION_START
 
 export generate_interfaces
 
 include("Templates.jl")
 
-# todo: clean function returns
-
 """
-    generate_interfaces(modules::Vector{Module}, output_path::AbstractString)
+Generate Fortran and Julia interfaces for the provided parsed modules.
 """
 function generate_interfaces(modules::Vector{<:AbstractModule}, output_path::AbstractString)
   if !(isdir(output_path))
@@ -25,18 +23,14 @@ function generate_interfaces(modules::Vector{<:AbstractModule}, output_path::Abs
 end
 
 """
-    build_fortran_interface(mod::Module, output_path::AbstractString)
-
-Build the Fortran interface for the module provided and save it to the given path.
+Build Fortran interface for the provided module.
 """
 function build_fortran_interface(mod::AbstractModule, output_path::AbstractString)
   interface_mod_name = mod.name * "_jl_interface"
   interface_file_name = joinpath(output_path, interface_mod_name * ".F90")
 
-  # Check if file exists and custom section is present
+  # Check if file exists, custom section is present and for already implemented routines
   custom_section = find_custom_section(interface_file_name, FORTRAN)
-
-  # Check for routines already implemented in the custom section and avoid implementing them again automatically
   custom_routines = find_fortran_routines_custom_section(custom_section)
 
   interface_file_contents = t_doc_header_fortran(Dates.format(Dates.now(), "d U Y"), interface_mod_name)
@@ -44,27 +38,26 @@ function build_fortran_interface(mod::AbstractModule, output_path::AbstractStrin
 
   # Derived type getters and setters
   for derived_type in mod.types
+    module_code *= t_factory(derived_type.name, FORTRAN) * "\n"
+
     for member in derived_type.members
       module_code *= build_member_access(derived_type.name, member, custom_routines, FORTRAN)
     end
-    # Custom print function
+
     module_code *= build_type_print(derived_type, custom_routines, FORTRAN)
-    # Type factory
-    module_code *= t_factory(derived_type.name, FORTRAN) * "\n"
   end
 
   # Module variables
   for module_var in mod.variables
     module_code *= build_module_var_access(module_var, custom_routines, FORTRAN)
   end
-  #
-  # Routines
-  for proc in mod.procedures
-    module_code *= t_call_routine(proc, FORTRAN) * "\n"
+
+  # Procedures (functions and subroutines)
+  for procedure in mod.procedures
+    module_code *= build_procedure_interface(procedure, mod.name, custom_routines, FORTRAN)
   end
 
   module_code = indent_code(module_code, 2, false)
-
   interface_file_contents *= t_module_structure_fortran(interface_mod_name, mod.name, module_code, custom_section)
 
   open(interface_file_name, "w") do f
@@ -74,18 +67,14 @@ function build_fortran_interface(mod::AbstractModule, output_path::AbstractStrin
 end
 
 """
-    build_julia_interface(mod::Module, output_path::AbstractString)
-
-Build the Julia interface for the module provided and save it to the given path.
+Build Julia interface for the provided module.
 """
 function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
   interface_mod_name = mod.name * "_jl_interface"
   interface_file_name = joinpath(output_path, interface_mod_name * ".jl")
 
-  # Check if file exists and custom section is present
+  # Check if file exists, custom section is present and for already implemented routines
   custom_section = find_custom_section(interface_file_name, JULIA)
-
-  # Check for routines already implemented in the custom section and avoid implementing them again automatically
   custom_routines = find_julia_routines_custom_section(custom_section)
 
   interface_file_contents = t_doc_header_julia(Dates.format(Dates.now(), "d U Y"), interface_mod_name)
@@ -93,13 +82,13 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
 
   # Derived type getters and setters
   for derived_type in mod.types
+    module_code *= t_factory(derived_type.name, JULIA) * "\n"
+
     for member in derived_type.members
       module_code *= build_member_access(derived_type.name, member, custom_routines, JULIA)
     end
-    # Custom print function
+
     module_code *= build_type_print(derived_type, custom_routines, JULIA)
-    # Type factory
-    module_code *= t_factory(derived_type.name, JULIA) * "\n"
   end
 
   # Module variables
@@ -107,9 +96,9 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
     module_code *= build_module_var_access(module_var, custom_routines, JULIA)
   end
 
-  # Routines
-  for proc in mod.procedures
-    module_code *= t_call_routine(proc, JULIA) * "\n"
+  # Procedures (functions and subroutines)
+  for procedure in mod.procedures
+    module_code *= build_procedure_interface(procedure, mod.name, custom_routines, JULIA)
   end
 
   module_code = indent_code(module_code, 0, false)
@@ -121,9 +110,12 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
   end
 end
 
-function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
-  # todo: remove this check and improve interface generation
-  if member.type isa DerivedType || !isnothing(member.attributes.dimensions) || !is_interoperable(member)
+"""
+Returns code (for the `lang` language) of getter and setter for `member`.
+"""
+function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{<:AbstractString}, lang::Lang)::String
+  # TODO: remove this check and improve interface generation
+  if member.type isa DerivedType || !isnothing(member.attributes.dimensions)
     return ""
   end
 
@@ -146,7 +138,10 @@ function build_member_access(type_name::AbstractString, member::Variable, custom
   return code
 end
 
-function build_module_var_access(module_var::ModuleVariable, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
+"""
+Returns code (for the `lang` language) of the interface function to access `module_var`.
+"""
+function build_module_var_access(module_var::ModuleVariable, custom_routines::Vector{<:AbstractString}, lang::Lang)::String
   if !module_var.var.attributes.is_target
     return ""
   end
@@ -161,7 +156,10 @@ function build_module_var_access(module_var::ModuleVariable, custom_routines::Ve
   return code
 end
 
-function build_type_print(type::DerivedType, custom_routines::Vector{<:AbstractString}, lang::Lang)::AbstractString
+"""
+Returns code (for the `lang` language) of the custom print routine for `type`.
+"""
+function build_type_print(type::DerivedType, custom_routines::Vector{<:AbstractString}, lang::Lang)::String
   code = ""
   printer_name = t_type_print_name(type.name)
   if !(printer_name in custom_routines)
@@ -173,22 +171,151 @@ function build_type_print(type::DerivedType, custom_routines::Vector{<:AbstractS
   return code
 end
 
-function needs_wrapper(p::Procedure)::Bool
-  if !isnothing(p.ret) && !is_interoperable(p.ret)
-    return true
+"""
+Returns Fortran interface code for `procedure`. Will generate any additional code 
+needed by it, like wrappers and structures.
+"""
+function build_procedure_interface(procedure::Procedure, module_name::AbstractString, custom_routines::Vector{<:AbstractString}, lang::Fortran)::String
+  if procedure.name in custom_routines
+    return ""
   end
 
-  for arg in p.args
-    if !is_interoperable(arg)
-      return true
+  code = ""
+  if needs_wrapper(procedure)
+    wrapper_name = t_procedure_wrapper_name(procedure.name)
+    if !(wrapper_name in custom_routines)
+      code *= build_fortran_wrapper(procedure)
+      code *= "\n"
     end
   end
 
-  return false
+  return code
 end
 
 """
-    find_custom_section(file_name::AbstractString, delimiter::AbstractString)::String
+Builds Fortran wrapper logic for `procedure` to be called from Julia.
+"""
+function build_fortran_wrapper(procedure::Procedure)::AbstractString
+  args = Any[]
+  pointer_conversions = String[]
+
+  for arg in procedure.args
+    if arg.type isa IntrinsicType
+      fortran_decl = ""
+      call_name = arg.name
+
+      # Handle arrays
+      if !isnothing(arg.attributes.dimensions)
+        fortran_decl = "TYPE(C_PTR), VALUE :: $(arg.name)"
+        ptr_var = "$(arg.name)_f"
+        call_name = ptr_var
+
+        # Generate pointer conversion code
+        if !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
+          push!(pointer_conversions, "$(fortran_type(arg.type)), POINTER :: $(ptr_var)(:)")
+          push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var), [size])")
+        else
+          push!(pointer_conversions, "$(fortran_type(arg.type)), POINTER :: $(ptr_var)(:)")
+          push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var), [size])")
+        end
+        # Handle scalars with intent
+      elseif !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
+        fortran_decl = "$(fortran_type(arg.type)), INTENT(INOUT) :: $(arg.name)"
+        call_name = arg.name
+        # Handle regular scalars
+      else
+        fortran_decl = "$(fortran_type(arg.type)), VALUE :: $(arg.name)"
+        call_name = arg.name
+      end
+
+      push!(args, (name=arg.name, fortran_decl=fortran_decl, call_name=call_name))
+    elseif arg.type isa DerivedType
+      # Handle derived type arguments
+      fortran_decl = "TYPE(C_PTR), VALUE :: $(arg.name)"
+      ptr_var = "$(arg.name)_f"
+      call_name = ptr_var
+
+      # Generate pointer conversion for derived types
+      if !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
+        push!(pointer_conversions, "TYPE($(arg.type.name)), POINTER :: $(ptr_var)")
+        push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var))")
+      else
+        push!(pointer_conversions, "TYPE($(arg.type.name)), POINTER :: $(ptr_var)")
+        push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var))")
+      end
+
+      push!(args, (name=arg.name, fortran_decl=fortran_decl, call_name=call_name))
+    end
+  end
+
+  ret_type = nothing
+  if procedure.ret !== nothing
+    if procedure.ret.type isa IntrinsicType
+      ret_type = fortran_type(procedure.ret.type)
+    elseif procedure.ret.type isa DerivedType
+      ret_type = "TYPE(C_PTR)"
+    end
+  end
+
+  return t_procedure_fortran_wrapper(procedure.name, args, ret_type, pointer_conversions)
+end
+
+"""
+Returns Julia interface code for `procedure`. Will generate any additional code 
+needed by it, like wrappers and structures.
+"""
+function build_procedure_interface(procedure::Procedure, module_name::AbstractString, custom_routines::Vector{<:AbstractString}, lang::Julia)::String
+  if procedure.name in custom_routines
+    return ""
+  end
+
+  args = []
+  for arg in procedure.args
+    if arg.type isa IntrinsicType
+      arg_type = ""
+
+      # Handle arrays
+      if !isnothing(arg.attributes.dimensions)
+        # Special case for character arrays (strings)
+        if lowercase(arg.type.name) == "character"
+          arg_type = julia_type(arg.type)  # Already Ptr{Cchar}
+        else
+          arg_type = "Ptr{$(julia_type(arg.type))}"
+        end
+      elseif !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
+        arg_type = "Ref{$(julia_type(arg.type))}"
+      else
+        if procedure.is_bind_c && arg.attributes.is_value
+          arg_type = julia_type(arg.type)
+        else
+          arg_type = "Ref{$(julia_type(arg.type))}"
+        end
+      end
+      push!(args, (name=arg.name, arg_type=arg_type, call_str="$(arg.name)::$arg_type"))
+    elseif arg.type isa DerivedType
+      push!(args, (name=arg.name, arg_type=arg.type.name, call_str="$(arg.name).handle"))
+    end
+  end
+
+  ret_type = nothing
+  if procedure.ret !== nothing
+    if procedure.ret.type isa IntrinsicType
+      # Check if return type is an array
+      if !isnothing(procedure.ret.attributes.dimensions)
+        ret_type = "Ptr{$(julia_type(procedure.ret.type))}"
+      else
+        ret_type = julia_type(procedure.ret.type)
+      end
+    elseif procedure.ret.type isa DerivedType && procedure.ret.type.name == "c_ptr"
+      ret_type = "Ptr{Cvoid}"
+    end
+    # TODO: handle derived type returns
+  end
+
+  return t_procedure_julia_call(procedure.name, module_name, !needs_wrapper(procedure), procedure.is_bind_c, args, ret_type) * "\n"
+end
+
+"""
 Find custom section, if present, in a file and extract its contents.
 """
 function find_custom_section(file_name::AbstractString, lang::Lang)::String
@@ -218,7 +345,6 @@ function find_custom_section(file_name::AbstractString, lang::Lang)::String
 end
 
 """
-    find_fortran_routines_custom_section(custom_section::AbstractString)::Vector{String}
 Search a custom section for implemented Fortran routines and return their names.
 """
 function find_fortran_routines_custom_section(custom_section::AbstractString)::Vector{String}
@@ -244,7 +370,6 @@ function find_fortran_routines_custom_section(custom_section::AbstractString)::V
 end
 
 """
-    find_julia_routines_custom_section(custom_section::AbstractString)::Vector{String} 
 Search a custom section for implemented Julia routines and return their names.
 """
 function find_julia_routines_custom_section(custom_section::AbstractString)::Vector{String}
@@ -252,7 +377,7 @@ function find_julia_routines_custom_section(custom_section::AbstractString)::Vec
   for line in split(custom_section, "\n")
     line = strip(line)
     if startswith(line, "function")
-      routine_name = strip(split(split(line, " ")[2], "(")[1])
+      routine_name = rstrip(strip(split(split(line, " ")[2], "(")[1]), ['!'])
       push!(custom_routines, routine_name)
     end
   end
@@ -261,7 +386,6 @@ function find_julia_routines_custom_section(custom_section::AbstractString)::Vec
 end
 
 """
-    indent_code(code::AbstractString, num_tabs::Int, new_line::Bool)::String
 Indent provided code with a certain number of tabs.
 """
 function indent_code(code::AbstractString, num_tabs::Int, new_line::Bool)::String

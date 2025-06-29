@@ -40,45 +40,44 @@ const F_INT = Dict("1" => "C_INT8_T", "2" => "C_INT16_T", "4" => "C_INT32_T", "8
 const F_REAL = Dict("4" => "C_FLOAT", "8" => "C_DOUBLE", "DBL" => "C_DOUBLE")
 const F_COMPLEX = Dict("4" => "C_FLOAT_COMPLEX", "8" => "C_DOUBLE_COMPLEX", "DBL" => "C_DOUBLE_COMPLEX")
 
-function _intrinsic_map(t::IntrinsicType)::Tuple{Bool,Union{String,Nothing}}
+"""
+Returns the Fortran interoperable equivalent type for the Fortran intrinsic type 
+provided, or `nothing` if there isn't one
+"""
+function fortran_type(t::IntrinsicType)::Union{String,Nothing}
   lname = lowercase(t.name)
   kind = isnothing(t.kind) ? "" : t.kind
   if lname == "integer"
     iso = get(F_INT, kind, "C_INT")
-    return true, "INTEGER($(iso))"
+    return "INTEGER($(iso))"
   elseif lname == "real"
     iso = get(F_REAL, kind, "C_DOUBLE")
-    return true, "REAL($(iso))"
+    return "REAL($(iso))"
   elseif lname == "complex"
     iso = get(F_COMPLEX, kind, "C_DOUBLE_COMPLEX")
-    return true, "COMPLEX($(iso))"
+    return "COMPLEX($(iso))"
   elseif lname == "logical"
-    return true, "LOGICAL(C_BOOL)"
+    return "LOGICAL(C_BOOL)"
   elseif lname == "character"
-    return true, "CHARACTER(KIND=C_CHAR), DIMENSION(*)"
+    return "CHARACTER(KIND=C_CHAR), DIMENSION(*)"
   else
-    return false, nothing
+    return nothing
   end
 end
 
-function fortran_type(t::IntrinsicType)::String
-  m = _intrinsic_map(t)[2]
-  return isnothing(m) ? "" : m
-end
-
-const JL_INT = Dict("1" => Int8, "2" => Int16, "4" => Int32, "8" => Int64)
-const JL_REAL = Dict("4" => Float32, "8" => Float64)
-const JL_COMPLEX = Dict("4" => ComplexF32, "8" => ComplexF64)
-
+"""
+Returns the Julia equivalent type for the Fortran intrinsic type provided, 
+or `Ptr{Cvoid}` if there isn't one
+"""
 function julia_type(t::IntrinsicType)::String
   lname = lowercase(t.name)
   kind = isnothing(t.kind) ? "" : t.kind
   if lname == "integer"
-    return string(get(JL_INT, kind, Int32))
+    return "Cint"
   elseif lname == "real"
-    return string(get(JL_REAL, kind, Float64))
+    return kind == "4" ? "Cfloat" : "Cdouble"
   elseif lname == "complex"
-    return string(get(JL_COMPLEX, kind, ComplexF64))
+    return kind == "4" ? "ComplexF32" : "ComplexF64"
   elseif lname == "logical"
     return "Cuchar"
   elseif lname == "character"
@@ -86,12 +85,6 @@ function julia_type(t::IntrinsicType)::String
   else
     return "Ptr{Cvoid}"
   end
-end
-
-function is_interoperable(t::IntrinsicType)::Bool
-  # todo: modify this, depending on the kind
-  #return isnothing(t.kind) || occursin("c_", lowercase(t.kind))
-  return _intrinsic_map(t)[1]
 end
 
 function isstring(type::IntrinsicType)::Bool
@@ -114,30 +107,6 @@ struct Variable{T<:AbstractType}
   attributes::VariableAttrs
 end
 Variable(name::AbstractString, type::T) where {T<:AbstractType} = Variable{T}(name, type, VariableAttrs())
-
-function is_interoperable(v::Variable)::Bool
-  at = v.attributes
-
-  # pointers, allocatable and targets need descriptors
-  if at.is_pointer || at.is_allocatable || at.is_target
-    return false
-  end
-
-  # assumed-shape are non-interoperable
-  if !isnothing(at.dimensions) && any(d -> d == ":", at.dimensions)
-    return false
-  end
-
-  return is_interoperable(v.type)
-end
-
-function julia_type(v::Variable)::String
-  if !is_interoperable(v)
-    return "Ptr{Cvoid}"
-  end
-
-  return julia_type(v.type)
-end
 
 function Base.show(io::IO, ::MIME"text/plain", var::Variable)
   indent = get(io, :indent, 0)
@@ -172,14 +141,6 @@ end
 DerivedType(name::AbstractString, members::Vector{Variable}) = DerivedType(name, members, DerivedTypeAttrs())
 DerivedType(name::AbstractString) = DerivedType(name, Variable[], DerivedTypeAttrs())
 
-function is_interoperable(t::DerivedType)::Bool
-  return false
-end
-
-function julia_type(t::DerivedType)::String
-  return "Ptr{Cvoid}"
-end
-
 function Base.show(io::IO, ::MIME"text/plain", type::DerivedType)
   indent = get(io, :indent, 0)
   tab = ' '^indent
@@ -199,9 +160,30 @@ struct Procedure
   ret::Union{Variable,Nothing}  # Nothing for subroutines
   is_pure::Bool
   is_elemental::Bool
+  is_bind_c::Bool
   visibility::Visibility
 end
-Procedure(name::AbstractString, args::Vector{Variable}, ret::Union{<:AbstractType,Nothing}=nothing) = Procedure(name, args, ret, false, false, Public)
+Procedure(name::AbstractString, args::Vector{Variable}, ret::Union{<:AbstractType,Nothing}=nothing) = Procedure(name, args, ret, false, false, false, Public)
+
+"""
+Returns `false` if the Fotran procedure can be directly called from Julia, `true` otherwise.
+"""
+function needs_wrapper(proc::Procedure)::Bool
+  for arg in proc.args
+    if !isnothing(arg.attributes.dimensions)
+      # Character arrays (strings) with bind(c) don't need wrappers
+      if proc.is_bind_c && arg.type isa IntrinsicType && lowercase(arg.type.name) == "character"
+        continue
+      end
+      return true
+    end
+    if arg.type isa DerivedType
+      return true
+    end
+  end
+
+  return false
+end
 
 function Base.show(io::IO, ::MIME"text/plain", proc::Procedure)
   indent = get(io, :indent, 0)
@@ -209,6 +191,7 @@ function Base.show(io::IO, ::MIME"text/plain", proc::Procedure)
   println(io, tab, "  name: ", proc.name)
   println(io, tab, "  is_pure: ", proc.is_pure)
   println(io, tab, "  is_elemental: ", proc.is_elemental)
+  println(io, tab, "  is_bind_c: ", proc.is_bind_c)
   println(io, tab, "  visibility: ", proc.visibility)
   println(io, tab, "  args: ")
   for (i, arg) in enumerate(proc.args)
@@ -262,3 +245,4 @@ function Base.show(io::IO, ::MIME"text/plain", mod::Module)
     show(IOContext(io, :indent => indent + 4), MIME"text/plain"(), proc)
   end
 end
+

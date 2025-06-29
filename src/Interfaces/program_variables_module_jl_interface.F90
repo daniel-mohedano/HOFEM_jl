@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 15 June 2025
+!> 29 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for program_variables_module_jl_interface
@@ -20,6 +20,26 @@ MODULE program_variables_module_jl_interface
 	IMPLICIT NONE
 	
 	CONTAINS
+!@C Anything inside this section will be preserved by the builder
+
+!/@C
+
+		FUNCTION new_programCommonData() BIND(C)
+			TYPE(C_PTR) :: new_programCommonData
+			TYPE(programCommonData), POINTER :: obj
+		
+			ALLOCATE(obj)
+			new_programCommonData = c_loc(obj)
+		END FUNCTION new_programCommonData
+		
+		SUBROUTINE free_programCommonData(p) BIND(C)
+			TYPE(C_PTR), VALUE :: p
+			TYPE(programCommonData), POINTER :: obj
+		
+			CALL c_f_pointer(p, obj)
+			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
+		END SUBROUTINE free_programCommonData
+		
 		SUBROUTINE programCommonData_set_program_mode(data_c_ptr, val) BIND(C)
 			TYPE(C_PTR), VALUE :: data_c_ptr
 			CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
@@ -475,21 +495,21 @@ MODULE program_variables_module_jl_interface
 			PRINT *, "slevel_memory_MB:", data%slevel_memory_MB
 		END SUBROUTINE print_programCommonData
 		
-		FUNCTION new_programCommonData() BIND(C)
-			TYPE(C_PTR) :: new_programCommonData
-			TYPE(programCommonData), POINTER :: obj
+		FUNCTION new_gid_surface_sets() BIND(C)
+			TYPE(C_PTR) :: new_gid_surface_sets
+			TYPE(gid_surface_sets), POINTER :: obj
 		
 			ALLOCATE(obj)
-			new_programCommonData = c_loc(obj)
-		END FUNCTION new_programCommonData
+			new_gid_surface_sets = c_loc(obj)
+		END FUNCTION new_gid_surface_sets
 		
-		SUBROUTINE free_programCommonData(p) BIND(C)
+		SUBROUTINE free_gid_surface_sets(p) BIND(C)
 			TYPE(C_PTR), VALUE :: p
-			TYPE(programCommonData), POINTER :: obj
+			TYPE(gid_surface_sets), POINTER :: obj
 		
 			CALL c_f_pointer(p, obj)
 			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
-		END SUBROUTINE free_programCommonData
+		END SUBROUTINE free_gid_surface_sets
 		
 		SUBROUTINE gid_surface_sets_set_set_ID(data_c_ptr, val) BIND(C)
 			TYPE(C_PTR), VALUE :: data_c_ptr
@@ -518,22 +538,6 @@ MODULE program_variables_module_jl_interface
 			PRINT *, "set_info:", data%set_info
 		END SUBROUTINE print_gid_surface_sets
 		
-		FUNCTION new_gid_surface_sets() BIND(C)
-			TYPE(C_PTR) :: new_gid_surface_sets
-			TYPE(gid_surface_sets), POINTER :: obj
-		
-			ALLOCATE(obj)
-			new_gid_surface_sets = c_loc(obj)
-		END FUNCTION new_gid_surface_sets
-		
-		SUBROUTINE free_gid_surface_sets(p) BIND(C)
-			TYPE(C_PTR), VALUE :: p
-			TYPE(gid_surface_sets), POINTER :: obj
-		
-			CALL c_f_pointer(p, obj)
-			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
-		END SUBROUTINE free_gid_surface_sets
-		
 		FUNCTION get_commonProperties() BIND(C)
 			TYPE(C_PTR) :: get_commonProperties
 			TYPE(programCommonData), POINTER :: ptr
@@ -541,10 +545,5 @@ MODULE program_variables_module_jl_interface
 			get_commonProperties = c_loc(ptr)
 		END FUNCTION get_commonProperties
 		
-
-
-!@C Anything inside this section will be preserved by the builder
-
-!/@C
 
 END MODULE program_variables_module_jl_interface

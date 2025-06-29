@@ -57,21 +57,19 @@ function t_module_structure_fortran(interface_name::AbstractString, mod_name::Ab
   \tIMPLICIT NONE
   \t
   \tCONTAINS
-  $contents
-
   $custom_section
 
+  $contents
   END MODULE $interface_name
   """
 end
 
-function t_module_structure_julia(module_code::AbstractString, custom_section::AbstractString)::String
+function t_module_structure_julia(contents::AbstractString, custom_section::AbstractString)::String
   return """
   _HOFEM_LIB_PATH = get(ENV, "HOFEM_LIB_PATH", "")
-
-  $module_code
-
   $custom_section
+
+  $contents
   """
 end
 
@@ -145,14 +143,14 @@ end
 function t_setter(type_name::AbstractString, member_name::AbstractString, member_type::IntrinsicType, member_inter_type::AbstractString, lang::Julia)::String
   if isstring(member_type)
     return """
-    function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
-    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
+    function set_$(member_name)!(obj::$(type_name), val::String)
+    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(obj.handle::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
     end
     """
   else
     return """
-    function $(t_setter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)
-    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::$member_inter_type)::Cvoid
+    function set_$(member_name)!(obj::$(type_name), val::$member_inter_type)
+    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_setter_name(type_name, member_name, FORTRAN)))(obj.handle::Ptr{Cvoid}, val::$member_inter_type)::Cvoid
     end
     """
   end
@@ -193,14 +191,14 @@ end
 function t_getter(type_name::AbstractString, member_name::AbstractString, member_type::IntrinsicType, member_inter_type::AbstractString, lang::Julia)::String
   if isstring(member_type)
     return """
-    function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid}, val::String)
-    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
+    function get_$(member_name)(obj::$(type_name), val::String)
+    \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(obj.handle::Ptr{Cvoid}, val::Ptr{Cchar})::Cvoid
     end
     """
   else
     return """
-    function $(t_getter_name(type_name, member_name, lang))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
-    \treturn @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(data_c_ptr::Ptr{Cvoid})::$member_inter_type
+    function get_$(member_name)(obj::$(type_name))::$member_inter_type
+    \treturn @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_name(type_name, member_name, FORTRAN)))(obj.handle::Ptr{Cvoid})::$member_inter_type
     end
     """
   end
@@ -255,8 +253,8 @@ end
 
 function t_getter_module_var(var_name::AbstractString, type_name::AbstractString, lang::Julia)::String
   return """
-  function $(t_getter_module_var_name(var_name))()::Ptr{Cvoid}
-  \treturn @ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_module_var_name(var_name)))()::Ptr{Cvoid}
+  function get_$(var_name)()::$(type_name)
+  \treturn $(type_name)(@ccall _HOFEM_LIB_PATH.$(lowercase(t_getter_module_var_name(var_name)))()::Ptr{Cvoid})
   end
   """
 end
@@ -279,103 +277,69 @@ end
 
 function t_type_print(type_name::AbstractString, member_names::Vector{<:AbstractString}, lang::Julia)::String
   return """
-  function $(t_type_print_name(type_name))(data_c_ptr::Ptr{Cvoid})
-  \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_type_print_name(type_name)))(data_c_ptr::Ptr{Cvoid})::Cvoid
+  function print_$(type_name)(obj::$(type_name))
+  \t@ccall _HOFEM_LIB_PATH.$(lowercase(t_type_print_name(type_name)))(obj.handle::Ptr{Cvoid})::Cvoid
   end
   """
 end
 
-function default_procedure_symbol(modname::AbstractString, procname::AbstractString; compiler="intel")::String
-  if lowercase(compiler) == "intel"
-    return lowercase(modname) * "_mp_" * lowercase(procname) * "__"
-  elseif lowercase(compiler) == "gcc"
-    return "__" * lowercase(modname) * "_MOD_" * lowercase(procname)
-  else
-    return lowercase(procname)
-  end
+function t_procedure_wrapper_name(proc_name::AbstractString)::String
+  return "jl_$(proc_name)"
 end
 
-wrapper_symbol(proc::AbstractString) = "call_" * lowercase(proc)
-
-# returns
-# - declaration lines
-# - name to be passed to original routine, or nothing
-# - the conversion statements (if needed)
-function _wrapper_stub(v::Variable, is_return::Bool=false)::Tuple{String,AbstractString,AbstractString}
-  # todo: check intent logic for return types
-  f_type = fortran_type(v.type)
-  if is_interoperable(v)
-    intent = is_return ? "INTENT(OUT)" : "INTENT(IN)"
-    if v.attributes.intent === "value"
-      decl = "\t$f_type, VALUE :: $(v.name)"
+function t_procedure_julia_call(proc_name::AbstractString, mod_name::AbstractString, is_direct_call::Bool, is_bind_c::Bool, args::Vector, ret_type::Union{String,Nothing})::String
+  if is_direct_call
+    if is_bind_c
+      call_name = lowercase(proc_name)
     else
-      if v.attributes.dimensions === nothing
-        decl = "\t$f_type, $intent :: $(v.name)"
-      else
-        decl = "\t$f_type, DIMENSION(*) :: $(v.name)"
-      end
+      call_name = lowercase(mod_name) * "_mp_" * lowercase(proc_name) * "_"
     end
-
-    return decl, v.name, ""
   else
-    # todo: the original fortan type
-    temp_name = "f_" * v.name
-    decl = "\tTYPE(C_PTR), VALUE :: $(v.name)\n $(v.type.name)($f_type) :: $temp_name"
-
-    return decl, temp_name, "\tCALL c_f_pointer($(v.name), $temp_name)"
+    call_name = t_procedure_wrapper_name(proc_name)
   end
+
+  if isempty(args)
+    arg_list = ""
+    call_args = ""
+  else
+    arg_list = join(["$(arg.name)::$(arg.arg_type)" for arg in args], ", ")
+    call_args = join([arg.call_str for arg in args], ", ")
+  end
+  ret_annotation = isnothing(ret_type) ? "::Cvoid" : "::$(ret_type)"
+
+  return """
+  function $(proc_name)($(arg_list))$(ret_annotation)
+  \treturn @ccall _HOFEM_LIB_PATH.$(call_name)($(call_args))$(ret_annotation)
+  end
+  """
 end
 
-function t_call_routine(proc::Procedure, lang::Fortran)::String
-  # todo: check if it is actually needed to generate or not
-  name = wrapper_symbol(proc.name)
-  arg_list = join([v.name for v in proc.args], ", ")
-  stubs = [_wrapper_stub(v) for v in proc.args]
-  decls = join([s[1] for s in stubs], "\n")
-  call_args = join([s[2] for s in stubs], ", ")
-  conversions = join([s[3] for s in stubs], "\n")
+function t_procedure_fortran_wrapper(proc_name::AbstractString, args::Vector, ret_type::Union{String,Nothing}, conversions::Vector{String})::String
+  wrapper_name = t_procedure_wrapper_name(proc_name)
 
-  if isnothing(proc.ret)
+  arg_names = isempty(args) ? "" : join([arg.name for arg in args], ", ")
+  arg_decls = isempty(args) ? "" : join(["\t$(arg.fortran_decl)" for arg in args], "\n")
+  conversion_code = isempty(conversions) ? "" : join(["\t$(conv)" for conv in conversions], "\n")
+  call_args = isempty(args) ? "" : join([arg.call_name for arg in args], ", ")
+
+  if isnothing(ret_type)
     return """
-    SUBROUTINE $name($arg_list) BIND(C)
-    $decls
-    $conversions
-    CALL $(proc.name)($call_args)
-    END SUBROUTINE $name
+    SUBROUTINE $(wrapper_name)($(arg_names)) BIND(C)
+    $(arg_decls)
+    $(conversion_code)
+    \t
+    \tCALL $(proc_name)($(call_args))
+    END SUBROUTINE $(wrapper_name)
     """
   else
-    ret_stub = _wrapper_stub(proc.ret, true)
-    decls *= ret_stub[1]
-
     return """
-    FUNCTION $name($arg_list) BIND(C)
-    $decls
-    $conversions
-    $(ret_stub[2]) = $(proc.name)($call_args)
-    END FUNCTION $name
-    """
-  end
-end
-
-function t_call_routine(proc::Procedure, lang::Julia)::String
-  name = wrapper_symbol(proc.name)
-  args = [v.name for v in proc.args]
-  types = [julia_type(v) for v in proc.args]
-  inter_types = [startswith(t, "Ptr") ? t : "Ptr{$t}" for t in types]
-  arg_list = join(["$n::$t" for (n, t) in zip(args, inter_types)], ", ")
-
-  if isnothing(proc.ret)
-    return """
-    function $name($arg_list)
-    \t@ccall _HOFEM_LIB_PATH.$name($arg_list)
-    end
-    """
-  else
-    ret_type = julia_type(proc.ret)
-    return """
-    function $name($arg_list)::$ret_type
-    \treturn @ccall _HOFEM_LIB_PATH.$name($arg_list)::$ret_type
-    end
+    FUNCTION $(wrapper_name)($(arg_names)) BIND(C)
+    $(arg_decls)
+    $(conversion_code)
+    \t$(ret_type) :: $(wrapper_name)
+    \t
+    \t$(wrapper_name) = $(proc_name)($(call_args))
+    END FUNCTION $(wrapper_name)
     """
   end
 end

@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 15 June 2025
+!> 29 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for formulation_terms_module_jl_interface
@@ -20,6 +20,26 @@ MODULE formulation_terms_module_jl_interface
 	IMPLICIT NONE
 	
 	CONTAINS
+!@C Anything inside this section will be preserved by the builder
+
+!/@C
+
+		FUNCTION new_thermal_formulation() BIND(C)
+			TYPE(C_PTR) :: new_thermal_formulation
+			TYPE(thermal_formulation), POINTER :: obj
+		
+			ALLOCATE(obj)
+			new_thermal_formulation = c_loc(obj)
+		END FUNCTION new_thermal_formulation
+		
+		SUBROUTINE free_thermal_formulation(p) BIND(C)
+			TYPE(C_PTR), VALUE :: p
+			TYPE(thermal_formulation), POINTER :: obj
+		
+			CALL c_f_pointer(p, obj)
+			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
+		END SUBROUTINE free_thermal_formulation
+		
 		SUBROUTINE thermal_formulation_set_delta_sim_time(data_c_ptr, val) BIND(C)
 			TYPE(C_PTR), VALUE :: data_c_ptr
 			REAL(C_DOUBLE), VALUE :: val
@@ -157,30 +177,6 @@ MODULE formulation_terms_module_jl_interface
 			PRINT *, "time_step_strategy:", data%time_step_strategy
 		END SUBROUTINE print_thermal_formulation
 		
-		FUNCTION new_thermal_formulation() BIND(C)
-			TYPE(C_PTR) :: new_thermal_formulation
-			TYPE(thermal_formulation), POINTER :: obj
-		
-			ALLOCATE(obj)
-			new_thermal_formulation = c_loc(obj)
-		END FUNCTION new_thermal_formulation
-		
-		SUBROUTINE free_thermal_formulation(p) BIND(C)
-			TYPE(C_PTR), VALUE :: p
-			TYPE(thermal_formulation), POINTER :: obj
-		
-			CALL c_f_pointer(p, obj)
-			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
-		END SUBROUTINE free_thermal_formulation
-		
-		SUBROUTINE print_double_curl_wave_formulation(data_c_ptr) BIND(C)
-			TYPE(C_PTR), VALUE :: data_c_ptr
-			TYPE(double_curl_wave_formulation), POINTER :: data
-			CALL c_f_pointer(data_c_ptr, data)
-			PRINT *, "double_curl_wave_formulation"
-		
-		END SUBROUTINE print_double_curl_wave_formulation
-		
 		FUNCTION new_double_curl_wave_formulation() BIND(C)
 			TYPE(C_PTR) :: new_double_curl_wave_formulation
 			TYPE(double_curl_wave_formulation), POINTER :: obj
@@ -196,6 +192,30 @@ MODULE formulation_terms_module_jl_interface
 			CALL c_f_pointer(p, obj)
 			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
 		END SUBROUTINE free_double_curl_wave_formulation
+		
+		SUBROUTINE print_double_curl_wave_formulation(data_c_ptr) BIND(C)
+			TYPE(C_PTR), VALUE :: data_c_ptr
+			TYPE(double_curl_wave_formulation), POINTER :: data
+			CALL c_f_pointer(data_c_ptr, data)
+			PRINT *, "double_curl_wave_formulation"
+		
+		END SUBROUTINE print_double_curl_wave_formulation
+		
+		FUNCTION new_FormulationConstants() BIND(C)
+			TYPE(C_PTR) :: new_FormulationConstants
+			TYPE(FormulationConstants), POINTER :: obj
+		
+			ALLOCATE(obj)
+			new_FormulationConstants = c_loc(obj)
+		END FUNCTION new_FormulationConstants
+		
+		SUBROUTINE free_FormulationConstants(p) BIND(C)
+			TYPE(C_PTR), VALUE :: p
+			TYPE(FormulationConstants), POINTER :: obj
+		
+			CALL c_f_pointer(p, obj)
+			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
+		END SUBROUTINE free_FormulationConstants
 		
 		SUBROUTINE FormulationConstants_set_bilGradFiGradFi(data_c_ptr, val) BIND(C)
 			TYPE(C_PTR), VALUE :: data_c_ptr
@@ -413,21 +433,21 @@ MODULE formulation_terms_module_jl_interface
 			PRINT *, "bilNiGradFi:", data%bilNiGradFi
 		END SUBROUTINE print_FormulationConstants
 		
-		FUNCTION new_FormulationConstants() BIND(C)
-			TYPE(C_PTR) :: new_FormulationConstants
-			TYPE(FormulationConstants), POINTER :: obj
+		FUNCTION new_FormulationTerms() BIND(C)
+			TYPE(C_PTR) :: new_FormulationTerms
+			TYPE(FormulationTerms), POINTER :: obj
 		
 			ALLOCATE(obj)
-			new_FormulationConstants = c_loc(obj)
-		END FUNCTION new_FormulationConstants
+			new_FormulationTerms = c_loc(obj)
+		END FUNCTION new_FormulationTerms
 		
-		SUBROUTINE free_FormulationConstants(p) BIND(C)
+		SUBROUTINE free_FormulationTerms(p) BIND(C)
 			TYPE(C_PTR), VALUE :: p
-			TYPE(FormulationConstants), POINTER :: obj
+			TYPE(FormulationTerms), POINTER :: obj
 		
 			CALL c_f_pointer(p, obj)
 			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
-		END SUBROUTINE free_FormulationConstants
+		END SUBROUTINE free_FormulationTerms
 		
 		SUBROUTINE FormulationTerms_set_bilGradFiGradFi(data_c_ptr, val) BIND(C)
 			TYPE(C_PTR), VALUE :: data_c_ptr
@@ -728,22 +748,6 @@ MODULE formulation_terms_module_jl_interface
 			PRINT *, "physics:", data%physics
 		END SUBROUTINE print_FormulationTerms
 		
-		FUNCTION new_FormulationTerms() BIND(C)
-			TYPE(C_PTR) :: new_FormulationTerms
-			TYPE(FormulationTerms), POINTER :: obj
-		
-			ALLOCATE(obj)
-			new_FormulationTerms = c_loc(obj)
-		END FUNCTION new_FormulationTerms
-		
-		SUBROUTINE free_FormulationTerms(p) BIND(C)
-			TYPE(C_PTR), VALUE :: p
-			TYPE(FormulationTerms), POINTER :: obj
-		
-			CALL c_f_pointer(p, obj)
-			IF (ASSOCIATED(obj)) DEALLOCATE(obj)
-		END SUBROUTINE free_FormulationTerms
-		
 		FUNCTION get_thermal_simulation() BIND(C)
 			TYPE(C_PTR) :: get_thermal_simulation
 			TYPE(thermal_formulation), POINTER :: ptr
@@ -772,10 +776,5 @@ MODULE formulation_terms_module_jl_interface
 			get_formulation_terms = c_loc(ptr)
 		END FUNCTION get_formulation_terms
 		
-
-
-!@C Anything inside this section will be preserved by the builder
-
-!/@C
 
 END MODULE formulation_terms_module_jl_interface

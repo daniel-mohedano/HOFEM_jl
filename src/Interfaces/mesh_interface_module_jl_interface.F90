@@ -8,7 +8,7 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 15 June 2025
+!> 29 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for mesh_interface_module_jl_interface
@@ -20,9 +20,6 @@ MODULE mesh_interface_module_jl_interface
 	IMPLICIT NONE
 	
 	CONTAINS
-
-
-
 !@C Anything inside this section will be preserved by the builder
         SUBROUTINE jl_mesh_interface_constructor(filename, mesh_ptr) BIND(C)
             CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: filename
@@ -47,5 +44,7 @@ MODULE mesh_interface_module_jl_interface
             CALL mesh_interface_constructor(meshfilename, mesh)
         END SUBROUTINE jl_mesh_interface_constructor
 !/@C
+
+
 
 END MODULE mesh_interface_module_jl_interface
