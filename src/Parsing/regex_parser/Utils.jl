@@ -18,9 +18,9 @@ const _REGEXES = Dict(
   TYPE_END => r"^\s*END\s+TYPE\s+(?<name>\w+)\s*"i,
   VARIABLE => r"^\s*(?<type>\w+(?:\([^)]*\))?)(?<attrs>(?:\s*,\s*(?:INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\)|PARAMETER|ALLOCATABLE|POINTER|TARGET|VALUE))*)?\s*::\s*(?<names>(?:\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)(?:\s*,\s*\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)*)"i,
   GLOBAL_VAR => r"^\s*TYPE\((?<type>\w+)\)(?<attrs>(\s*,\s*(TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
-  SUBROUTINE_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*BIND(C))?\s*"i,
+  SUBROUTINE_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?SUBROUTINE\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(?<bind>\s*BIND\s*\(\s*C\s*\))?\s*"i,
   SUBROUTINE_END => r"^\s*END\s+SUBROUTINE(\s+(?<name>\w+))?\s*"i,
-  FUNCTION_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?((?<return_type>\w+(\([^)]*\))?)\s+)?FUNCTION\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*RESULT\((?<return_var>\w+)\))?(\s*BIND(C))?\s*"i,
+  FUNCTION_START => r"^\s*((?<attr>(PURE|ELEMENTAL))\s+)?((?<return_type>\w+(\([^)]*\))?)\s+)?FUNCTION\s+(?<name>\w+)\s*\((?<args>[\w\s,]*)\)(\s*RESULT\s*\((?<return_var>\w+)\s*\))?(?<bind>\s*BIND\s*\(\s*C\s*\))?\s*"i,
   FUNCTION_END => r"^\s*END\s+FUNCTION(\s+(?<name>\w+))?\s*"i,
 )
 

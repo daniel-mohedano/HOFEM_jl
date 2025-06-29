@@ -135,6 +135,7 @@ function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::
   attrs = original_match["attr"]
   is_pure = false
   is_elemental = false
+  is_bind_c = haskey(original_match, "bind") && original_match["bind"] !== nothing
   vis = Public::Visibility
   if !isnothing(attrs)
     if occursin(r"PURE"i, attrs)
@@ -164,7 +165,7 @@ function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::
 
     m = match(end_pattern, line)
     if !isnothing(m)
-      return Procedure(name, args, return_variable, is_pure, is_elemental, vis)
+      return Procedure(name, args, return_variable, is_pure, is_elemental, is_bind_c, vis)
     end
 
     # Look for argument declarations to update their types and attributes
@@ -183,7 +184,7 @@ function _parse_procedure(original_match::RegexMatch, is_function::Bool, lines::
     end
   end
 
-  return Procedure(name, args, return_variable, is_pure, is_elemental, vis)
+  return Procedure(name, args, return_variable, is_pure, is_elemental, is_bind_c, vis)
 end
 
 function _parse_variables(original_match::RegexMatch)::Vector{Variable}
