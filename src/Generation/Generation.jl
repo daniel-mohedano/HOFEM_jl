@@ -211,41 +211,43 @@ function build_fortran_wrapper(procedure::Procedure)::AbstractString
 
       # Handle arrays
       if !isnothing(arg.attributes.dimensions)
-        fortran_decl = "TYPE(C_PTR), VALUE :: $(arg.name)"
+        size_var = "$(arg.name)_size"
+        push!(args, (name=size_var, fortran_decl=["INTEGER, VALUE :: $size_var"], call_name=nothing))
+        fortran_decl = ["TYPE(C_PTR), VALUE :: $(arg.name)"]
         ptr_var = "$(arg.name)_f"
         call_name = ptr_var
 
         # Generate pointer conversion code
         if !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
-          push!(pointer_conversions, "$(fortran_type(arg.type)), POINTER :: $(ptr_var)(:)")
-          push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var), [size])")
+          push!(fortran_decl, "$(fortran_type(arg.type)), POINTER :: $(ptr_var)(:)")
+          push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var), [$size_var])")
         else
-          push!(pointer_conversions, "$(fortran_type(arg.type)), POINTER :: $(ptr_var)(:)")
-          push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var), [size])")
+          push!(fortran_decl, "$(fortran_type(arg.type)), POINTER :: $(ptr_var)(:)")
+          push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var), [$size_var])")
         end
         # Handle scalars with intent
       elseif !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
-        fortran_decl = "$(fortran_type(arg.type)), INTENT(INOUT) :: $(arg.name)"
+        fortran_decl = ["$(fortran_type(arg.type)), INTENT(INOUT) :: $(arg.name)"]
         call_name = arg.name
         # Handle regular scalars
       else
-        fortran_decl = "$(fortran_type(arg.type)), VALUE :: $(arg.name)"
+        fortran_decl = ["$(fortran_type(arg.type)), VALUE :: $(arg.name)"]
         call_name = arg.name
       end
 
       push!(args, (name=arg.name, fortran_decl=fortran_decl, call_name=call_name))
     elseif arg.type isa DerivedType
       # Handle derived type arguments
-      fortran_decl = "TYPE(C_PTR), VALUE :: $(arg.name)"
+      fortran_decl = ["TYPE(C_PTR), VALUE :: $(arg.name)"]
       ptr_var = "$(arg.name)_f"
       call_name = ptr_var
 
       # Generate pointer conversion for derived types
       if !isnothing(arg.attributes.intent) && arg.attributes.intent in ["out", "inout"]
-        push!(pointer_conversions, "TYPE($(arg.type.name)), POINTER :: $(ptr_var)")
+        push!(fortran_decl, "TYPE($(arg.type.name)), POINTER :: $(ptr_var)")
         push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var))")
       else
-        push!(pointer_conversions, "TYPE($(arg.type.name)), POINTER :: $(ptr_var)")
+        push!(fortran_decl, "TYPE($(arg.type.name)), POINTER :: $(ptr_var)")
         push!(pointer_conversions, "CALL c_f_pointer($(arg.name), $(ptr_var))")
       end
 
@@ -281,6 +283,9 @@ function build_procedure_interface(procedure::Procedure, module_name::AbstractSt
 
       # Handle arrays
       if !isnothing(arg.attributes.dimensions)
+        # Add a size variable
+        size_var = "$(arg.name)_size"
+        push!(args, (name=size_var, arg_type="Cint", call_str="$size_var::Cint"))
         # Special case for character arrays (strings)
         if lowercase(arg.type.name) == "character"
           arg_type = julia_type(arg.type)  # Already Ptr{Cchar}
@@ -298,7 +303,7 @@ function build_procedure_interface(procedure::Procedure, module_name::AbstractSt
       end
       push!(args, (name=arg.name, arg_type=arg_type, call_str="$(arg.name)::$arg_type"))
     elseif arg.type isa DerivedType
-      push!(args, (name=arg.name, arg_type=arg.type.name, call_str="$(arg.name).handle"))
+      push!(args, (name=arg.name, arg_type=arg.type.name, call_str="$(arg.name).handle::Ptr{Cvoid}"))
     end
   end
 

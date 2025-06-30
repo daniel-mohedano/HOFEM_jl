@@ -326,9 +326,9 @@ function t_procedure_fortran_wrapper(proc_name::AbstractString, args::Vector, re
   wrapper_name = t_procedure_wrapper_name(proc_name)
 
   arg_names = isempty(args) ? "" : join([arg.name for arg in args], ", ")
-  arg_decls = isempty(args) ? "" : join(["\t$(arg.fortran_decl)" for arg in args], "\n")
+  arg_decls = isempty(args) ? "" : join([join(["\t$decl" for decl in arg.fortran_decl], "\n") for arg in args], "\n")
   conversion_code = isempty(conversions) ? "" : join(["\t$(conv)" for conv in conversions], "\n")
-  call_args = isempty(args) ? "" : join([arg.call_name for arg in args], ", ")
+  call_args = isempty(args) ? "" : join([arg.call_name for arg in args if !isnothing(arg.call_name)], ", ")
 
   if isnothing(ret_type)
     return """
