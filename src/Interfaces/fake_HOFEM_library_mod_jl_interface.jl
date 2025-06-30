@@ -10,6 +10,7 @@
 !> Automatically generated Julia interface module for fake_HOFEM_library_mod_jl_interface
 !----------------------------------------------------------------------------------------------------------------------
 """
+
 _HOFEM_LIB_PATH = get(ENV, "HOFEM_LIB_PATH", "")
 #@C Anything inside this section will be preserved by the builder
 
@@ -48,7 +49,7 @@ function print_fakeObject_t(obj::fakeObject_t)
 end
 
 function print_fakeObject(thisfakeObject::fakeObject_t)::Cvoid
-	return @ccall _HOFEM_LIB_PATH.jl_print_fakeObject(thisfakeObject.handle)::Cvoid
+	return @ccall _HOFEM_LIB_PATH.jl_print_fakeObject(thisfakeObject.handle::Ptr{Cvoid})::Cvoid
 end
 
 

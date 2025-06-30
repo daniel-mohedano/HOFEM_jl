@@ -13,6 +13,7 @@
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for fake_HOFEM_library_mod_jl_interface
 !----------------------------------------------------------------------------------------------------------------------
+
 MODULE fake_HOFEM_library_mod_jl_interface
 	USE iso_c_binding
 	USE fake_HOFEM_library_mod
@@ -63,6 +64,7 @@ MODULE fake_HOFEM_library_mod_jl_interface
 			CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
 			TYPE(fakeObject_t), POINTER :: data
 			INTEGER :: i = 1
+			INTEGER :: LENGTH = 255
 			
 			CALL c_f_pointer(data_c_ptr, data)
 			DO
@@ -81,6 +83,7 @@ MODULE fake_HOFEM_library_mod_jl_interface
 			CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(INOUT) :: string
 			TYPE(fakeObject_t), POINTER :: data
 			INTEGER :: i = 1
+			INTEGER :: LENGTH = 255
 			
 			CALL c_f_pointer(data_c_ptr, data)
 			DO

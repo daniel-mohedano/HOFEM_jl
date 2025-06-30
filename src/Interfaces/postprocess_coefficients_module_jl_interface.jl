@@ -4,12 +4,13 @@
 !> Daniel Mohedano Rodríguez
 !
 !> @date
-!> 29 June 2025
+!> 30 June 2025
 !
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for postprocess_coefficients_module_jl_interface
 !----------------------------------------------------------------------------------------------------------------------
 """
+
 _HOFEM_LIB_PATH = get(ENV, "HOFEM_LIB_PATH", "")
 #@C Anything inside this section will be preserved by the builder
 function read_coefficients_from_postprocess_file(frequency::Integer, rhs::Integer, n_rhs::Integer, n_coeffs::Integer, project_name::String)::Array{ComplexF64}
@@ -66,11 +67,11 @@ end
 #/@C
 
 function write_thermal_coefficients_into_postprocess_file(mesh::MeshObject, time_step::Ref{Cdouble})::Cvoid
-	return @ccall _HOFEM_LIB_PATH.jl_write_thermal_coefficients_into_postprocess_file(mesh.handle, time_step::Ref{Cdouble})::Cvoid
+	return @ccall _HOFEM_LIB_PATH.jl_write_thermal_coefficients_into_postprocess_file(mesh.handle::Ptr{Cvoid}, time_step::Ref{Cdouble})::Cvoid
 end
 
 function write_coefficients_into_postprocess_file(mesh::MeshObject, frequency::Ref{Cint}, rhs_lower::Ref{Cint}, rhs_upper::Ref{Cint})::Cvoid
-	return @ccall _HOFEM_LIB_PATH.jl_write_coefficients_into_postprocess_file(mesh.handle, frequency::Ref{Cint}, rhs_lower::Ref{Cint}, rhs_upper::Ref{Cint})::Cvoid
+	return @ccall _HOFEM_LIB_PATH.jl_write_coefficients_into_postprocess_file(mesh.handle::Ptr{Cvoid}, frequency::Ref{Cint}, rhs_lower::Ref{Cint}, rhs_upper::Ref{Cint})::Cvoid
 end
 
 function copy_adaptivity_coefficients_into_postprocess_file(frequency::Ref{Cint})::Cvoid
@@ -78,7 +79,7 @@ function copy_adaptivity_coefficients_into_postprocess_file(frequency::Ref{Cint}
 end
 
 function postprocess_get_gid_gauss_points(mesh::MeshObject, gauss_points::Ptr{Cdouble})::Cvoid
-	return @ccall _HOFEM_LIB_PATH.jl_postprocess_get_gid_gauss_points(mesh.handle, gauss_points::Ptr{Cdouble})::Cvoid
+	return @ccall _HOFEM_LIB_PATH.jl_postprocess_get_gid_gauss_points(mesh.handle::Ptr{Cvoid}, gauss_points::Ptr{Cdouble})::Cvoid
 end
 
 

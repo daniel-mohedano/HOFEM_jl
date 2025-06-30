@@ -13,6 +13,7 @@
 ! DESCRIPTION:
 !> Automatically generated Julia interface module for fake_SparseMatrix_mod_jl_interface
 !----------------------------------------------------------------------------------------------------------------------
+
 MODULE fake_SparseMatrix_mod_jl_interface
 	USE iso_c_binding
 	USE fake_SparseMatrix_mod
@@ -130,20 +131,6 @@ MODULE fake_SparseMatrix_mod_jl_interface
 			SparseMatrix_type_get_flag_complex = data%flag_complex
 		END FUNCTION SparseMatrix_type_get_flag_complex
 		
-		SUBROUTINE print_SparseMatrix_type(data_c_ptr) BIND(C)
-			TYPE(C_PTR), VALUE :: data_c_ptr
-			TYPE(SparseMatrix_type), POINTER :: data
-			CALL c_f_pointer(data_c_ptr, data)
-			PRINT *, "SparseMatrix_type"
-			PRINT *, "n:", data%n
-			PRINT *, "nnz:", data%nnz
-			PRINT *, "mat_type_format:", data%mat_type_format
-			PRINT *, "flag_sym:", data%flag_sym
-			PRINT *, "flag_complex:", data%flag_complex
-			PRINT *, "IRN:", data%IRN
-			PRINT *, "JCN:", data%JCN
-		END SUBROUTINE print_SparseMatrix_type
-		
 		FUNCTION new_SparseMatrix_type_real() BIND(C)
 			TYPE(C_PTR) :: new_SparseMatrix_type_real
 			TYPE(SparseMatrix_type_real), POINTER :: obj
@@ -224,29 +211,31 @@ MODULE fake_SparseMatrix_mod_jl_interface
 			CALL set_default_DenseRHS_type(DenseRHS_f)
 		END SUBROUTINE jl_set_default_DenseRHS_type
 		
-		SUBROUTINE jl_set_SparseMatrix_type(FEM_matrix, n, mat_type_format, flag_sym, IRN, JCN) BIND(C)
+		SUBROUTINE jl_set_SparseMatrix_type(FEM_matrix, n, mat_type_format, flag_sym, IRN_size, IRN, JCN_size, JCN) BIND(C)
 			TYPE(C_PTR), VALUE :: FEM_matrix
+			TYPE(SparseMatrix_type), POINTER :: FEM_matrix_f
 			INTEGER(C_INT), VALUE :: n
 			INTEGER(C_INT), VALUE :: mat_type_format
 			INTEGER(C_INT), VALUE :: flag_sym
+			INTEGER, VALUE :: IRN_size
 			TYPE(C_PTR), VALUE :: IRN
-			TYPE(C_PTR), VALUE :: JCN
-			TYPE(SparseMatrix_type), POINTER :: FEM_matrix_f
-			CALL c_f_pointer(FEM_matrix, FEM_matrix_f)
 			INTEGER(C_INT), POINTER :: IRN_f(:)
-			CALL c_f_pointer(IRN, IRN_f, [size])
+			INTEGER, VALUE :: JCN_size
+			TYPE(C_PTR), VALUE :: JCN
 			INTEGER(C_INT), POINTER :: JCN_f(:)
-			CALL c_f_pointer(JCN, JCN_f, [size])
+			CALL c_f_pointer(FEM_matrix, FEM_matrix_f)
+			CALL c_f_pointer(IRN, IRN_f, [IRN_size])
+			CALL c_f_pointer(JCN, JCN_f, [JCN_size])
 			
 			CALL set_SparseMatrix_type(FEM_matrix_f, n, mat_type_format, flag_sym, IRN_f, JCN_f)
 		END SUBROUTINE jl_set_SparseMatrix_type
 		
 		SUBROUTINE jl_set_DenseRHS_type(DenseRHS, n, mat_type_format, flag_sym) BIND(C)
 			TYPE(C_PTR), VALUE :: DenseRHS
+			TYPE(SparseMatrix_type), POINTER :: DenseRHS_f
 			INTEGER(C_INT), VALUE :: n
 			INTEGER(C_INT), VALUE :: mat_type_format
 			INTEGER(C_INT), VALUE :: flag_sym
-			TYPE(SparseMatrix_type), POINTER :: DenseRHS_f
 			CALL c_f_pointer(DenseRHS, DenseRHS_f)
 			
 			CALL set_DenseRHS_type(DenseRHS_f, n, mat_type_format, flag_sym)
