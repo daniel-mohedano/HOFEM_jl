@@ -14,7 +14,7 @@ end
 const _REGEXES = Dict(
   MODULE_START => r"^\s*MODULE\s+(?<name>\w+)\s*"i,
   MODULE_END => r"^\s*END\s+MODULE\s+(?<name>\w+)\s*"i,
-  TYPE_START => r"^\s*TYPE(?<attrs>(\s*,\s*(EXTENDS\(\s*\w+\s*\)|ABSTRACT|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
+  TYPE_START => r"^\s*TYPE(?<attrs>(\s*,\s*(EXTENDS\(\s*\w+\s*\)|ABSTRACT|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i, # TODO: visibility can also be under the TYPE :: ... line
   TYPE_END => r"^\s*END\s+TYPE\s+(?<name>\w+)\s*"i,
   VARIABLE => r"^\s*(?<type>\w+(?:\([^)]*\))?)(?<attrs>(?:\s*,\s*(?:INTENT\((?:IN|OUT|INOUT)\)|DIMENSION\([^)]*\)|PARAMETER|ALLOCATABLE|POINTER|TARGET|VALUE))*)?\s*::\s*(?<names>(?:\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)(?:\s*,\s*\w+(?:\([\w:,]*\))?(?:\s*=\s*[^!,]+?)?)*)"i,
   GLOBAL_VAR => r"^\s*TYPE\((?<type>\w+)\)(?<attrs>(\s*,\s*(TARGET|ALLOCATABLE|POINTER|PUBLIC|PRIVATE))*)?\s*::\s*(?<name>\w+)\s*"i,
