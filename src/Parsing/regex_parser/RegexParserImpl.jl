@@ -14,26 +14,25 @@ function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vect
 
     lines = [strip(line) for line in readlines(file)]
     modinfo = _parse(lines)
-    if !isnothing(modinfo)
-      push!(modules, modinfo)
-    end
+    append!(modules, modinfo)
   end
 
   return modules
 end
 
 # Parse a file
-function _parse(lines::Vector{<:AbstractString})::Union{Module,Nothing}
+function _parse(lines::Vector{<:AbstractString})::Vector{Module}
+  modules = []
   while length(lines) > 0
     line = popfirst!(lines)
 
     m = match(MODULE_START::MatchType, line)
     if !isnothing(m)
-      return _parse_module(m, lines)
+      push!(modules, _parse_module(m, lines))
     end
   end
 
-  return nothing
+  return modules
 end
 
 # Parse a module, which can contain:
