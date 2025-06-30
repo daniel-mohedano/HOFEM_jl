@@ -17,8 +17,10 @@ function generate_interfaces(modules::Vector{<:AbstractModule}, output_path::Abs
   end
 
   for mod in modules
-    build_fortran_interface(mod, output_path)
-    build_julia_interface(mod, output_path)
+    if !isempty(mod)
+      build_fortran_interface(mod, output_path)
+      build_julia_interface(mod, output_path)
+    end
   end
 end
 

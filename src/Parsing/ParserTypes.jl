@@ -225,6 +225,10 @@ struct Module <: AbstractModule
 end
 Module(name::AbstractString) = Module(name, DerivedType[], ModuleVariable[], Procedure[])
 
+function Base.isempty(mod::Module)::Bool
+  return isempty(mod.types) && isempty(mod.variables) && isempty(mod.procedures)
+end
+
 function Base.show(io::IO, ::MIME"text/plain", mod::Module)
   indent = get(io, :indent, 0)
   tab = ' '^indent
