@@ -46,7 +46,8 @@ function build_fortran_interface(mod::AbstractModule, output_path::AbstractStrin
       module_code *= build_member_access(derived_type.name, member, custom_routines, FORTRAN)
     end
 
-    module_code *= build_type_print(derived_type, custom_routines, FORTRAN)
+    # TODO: remove this ugly logic of vcat
+    module_code *= build_type_print(derived_type, vcat(custom_routines, [p.name for p in mod.procedures]), FORTRAN)
   end
 
   # Module variables
@@ -90,7 +91,7 @@ function build_julia_interface(mod::AbstractModule, output_path::AbstractString)
       module_code *= build_member_access(derived_type.name, member, custom_routines, JULIA)
     end
 
-    module_code *= build_type_print(derived_type, custom_routines, JULIA)
+    module_code *= build_type_print(derived_type, vcat(custom_routines, [p.name for p in mod.procedures]), JULIA)
   end
 
   # Module variables
