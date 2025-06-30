@@ -10,7 +10,7 @@ function parse(p::ASTParserImpl, module_files::Vector{<:AbstractString})::Vector
 
   for file in module_files
     if !(isfile(file))
-      @warn "Fortran module `$file` not found."
+      @error "Fortran module `$file` not found."
       continue
     end
 

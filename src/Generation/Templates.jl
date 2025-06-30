@@ -8,6 +8,14 @@ abstract type Lang end
 struct Fortran <: Lang end
 struct Julia <: Lang end
 
+function string(x::Fortran)
+  return "Fortran"
+end
+
+function string(x::Julia)
+  return "Fortran"
+end
+
 FORTRAN = Fortran()
 JULIA = Julia()
 

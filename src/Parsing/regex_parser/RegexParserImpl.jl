@@ -8,7 +8,7 @@ function parse(p::RegexParserImpl, module_files::Vector{<:AbstractString})::Vect
 
   for file in module_files
     if !(isfile(file))
-      @warn "Fortran module `$file` not found."
+      @error "Fortran module `$file` not found."
       continue
     end
 

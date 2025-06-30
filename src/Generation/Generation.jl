@@ -12,7 +12,7 @@ Generate Fortran and Julia interfaces for the provided parsed modules.
 """
 function generate_interfaces(modules::Vector{<:AbstractModule}, output_path::AbstractString)
   if !(isdir(output_path))
-    @warn "Invalid interface path provided `$output_path`, not a directory."
+    @error "Invalid interface path provided `$output_path`, not a directory."
     return
   end
 
@@ -116,6 +116,7 @@ Returns code (for the `lang` language) of getter and setter for `member`.
 function build_member_access(type_name::AbstractString, member::Variable, custom_routines::Vector{<:AbstractString}, lang::Lang)::String
   # TODO: remove this check and improve interface generation
   if member.type isa DerivedType || !isnothing(member.attributes.dimensions)
+    @warn "[$(string(lang))] Access for member '$type_name.$(member.name)' not generated"
     return ""
   end
 
@@ -143,6 +144,7 @@ Returns code (for the `lang` language) of the interface function to access `modu
 """
 function build_module_var_access(module_var::ModuleVariable, custom_routines::Vector{<:AbstractString}, lang::Lang)::String
   if !module_var.var.attributes.is_target
+    @warn "[$(string(lang))] Access for module variable '$(module_var.var.name)' not generated"
     return ""
   end
 
@@ -310,6 +312,7 @@ function build_procedure_interface(procedure::Procedure, module_name::AbstractSt
       ret_type = "Ptr{Cvoid}"
     end
     # TODO: handle derived type returns
+    @warn "[Julia] Return type for procedure $(procedure.name) ignored, it's a derived type"
   end
 
   return t_procedure_julia_call(procedure.name, module_name, !needs_wrapper(procedure), procedure.is_bind_c, args, ret_type) * "\n"
