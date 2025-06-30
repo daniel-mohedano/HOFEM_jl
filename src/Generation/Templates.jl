@@ -36,6 +36,7 @@ function t_doc_header_fortran(date::AbstractString, mod_name::AbstractString)::S
   ! DESCRIPTION:
   !> Automatically generated Julia interface module for $mod_name
   !----------------------------------------------------------------------------------------------------------------------
+
   """
 end
 
@@ -53,6 +54,7 @@ function t_doc_header_julia(date::AbstractString, mod_name::AbstractString)::Str
   !> Automatically generated Julia interface module for $mod_name
   !----------------------------------------------------------------------------------------------------------------------
   \"\"\"
+
   """
 end
 
@@ -114,6 +116,7 @@ function t_getter_name(type_name::AbstractString, member_name::AbstractString, l
 end
 
 function t_setter(type_name::AbstractString, member_name::AbstractString, member_type::IntrinsicType, member_inter_type::AbstractString, lang::Fortran)::String
+  # TODO: handle better string types
   if isstring(member_type)
     return """
     SUBROUTINE $(t_setter_name(type_name, member_name, lang))(data_c_ptr, val) BIND(C)
@@ -121,6 +124,7 @@ function t_setter(type_name::AbstractString, member_name::AbstractString, member
     \tCHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: val
     \tTYPE($type_name), POINTER :: data
     \tINTEGER :: i = 1
+    \tINTEGER :: LENGTH = 255
     \t
     \tCALL c_f_pointer(data_c_ptr, data)
     \tDO
@@ -172,6 +176,7 @@ function t_getter(type_name::AbstractString, member_name::AbstractString, member
     \tCHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(INOUT) :: string
     \tTYPE($type_name), POINTER :: data
     \tINTEGER :: i = 1
+    \tINTEGER :: LENGTH = 255
     \t
     \tCALL c_f_pointer(data_c_ptr, data)
     \tDO
